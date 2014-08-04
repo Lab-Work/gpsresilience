@@ -9,7 +9,7 @@ from cov_matrix import *
 from numpy import array_equal
 
 class MVGaussianKernel:
-	def __init__(self, obs, spherical_bandwidth=120):
+	def __init__(self, obs, spherical_bandwidth=10):
 		
 		diag_list = [spherical_bandwidth] * len(obs)
 		sig = matrix(diag(diag_list))
@@ -28,9 +28,12 @@ class MVGaussianKernel:
 		log_ps = []		
 		for dist in self.distributions:			
 			if(not array_equal(obs, dist.mu)):
-				logprob = dist.gaussian_loglik_scaled(obs)
+				logprob = dist.gaussian_loglik(obs)
 				log_ps.append(logprob)
 		
 		return addLogs(log_ps) - len(log_ps)
-		
+
+
+if (__name__=="__main__"):
+	M
 		

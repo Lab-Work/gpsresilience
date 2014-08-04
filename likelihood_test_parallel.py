@@ -369,13 +369,26 @@ def computeLeave1Stats(s_x, s_xxt, count, x, weekday, hour):
 
 def scale_kern_timeseries(kern_timeseries):
 	max_val = defaultdict(lambda : float('-inf'))
+	
+	val_list = defaultdict(list)
 	for (date, hour, weekday) in kern_timeseries:
 		p = kern_timeseries[date, hour, weekday]
+		val_list[weekday, hour].append(p)
 		if(p < 0):
-			max_val[weekday, hour] = max(max_val[weekday, hour], kern_timeseries[date, hour, weekday])
+			max_val[weekday, hour] = max(max_val[weekday, hour], p)
 
+
+	medians = {}
+	for (weekday, hour) in sorted(max_val):
+		val_list[weekday, hour].sort()
+		median = getQuantile(val_list[weekday, hour], .5)
+		medians[weekday, hour] = median
+		print median
+	
+	pickle.dump(val_list, open("misc_code/val_list.pickle", "w"))
+		
 	for (date, hour, weekday) in kern_timeseries:
-		kern_timeseries[date, hour, weekday] -= max_val[weekday, hour]
+		kern_timeseries[date, hour, weekday] -= medians[weekday, hour]
 	
 	
 
@@ -447,18 +460,16 @@ def generateTimeSeriesLeave1(inDir):
 		worker.join()
 		logMsg("Joined.")
 	
-	scale_kern_timeseries(kern_timeseries)
+	if(COMPUTE_KERNEL):
+		scale_kern_timeseries(kern_timeseries)
 		
 	#Also read the global pace file
 	global_pace_timeseries = readGlobalPace("4year_features")
 	(expected_pace_timeseries, sd_pace_timeseries) = getExpectedPace(global_pace_timeseries)
 	
-	if(USE_EXPECTED_LNL):
-		lnl_cov_file = "results/expected_lnl_over_time_leave1.csv"
-		lnl_shrink_file = "results/expected_lnl_over_time_shrink_leave1.csv"
-	else:
-		lnl_cov_file = "results/lnl_over_time_leave1.csv"
-		lnl_shrink_file = "results/lnl_over_time_shrink_leave1.csv"
+
+	lnl_cov_file = "results/lnl_over_time_leave1.csv"
+	lnl_shrink_file = "results/lnl_over_time_shrink_leave1.csv"
 	
 	#output results to a file
 	w = csv.writer(open(lnl_cov_file, "w"))
@@ -477,13 +488,7 @@ def generateTimeSeriesLeave1(inDir):
 
 if(__name__=="__main__"):
 	#saveDistributions("4year_features", "results/covariance_matrices.pickle")
-	print (sys.argv)
-	
-	if(len(sys.argv) > 1):
-		if(sys.argv[1]=='expected'):
-			logMsg("Using expected likelihood")
-			USE_EXPECTED_LNL = True
-	
+
 	#with open("results/covariance_tmp.pickle", "rb") as f:
 	#	logMsg("Loading distributions from file...")
 	#	distributions = pickle.load(f)

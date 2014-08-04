@@ -8,8 +8,7 @@ from numpy import concatenate, cov, var, matrix, diag, transpose, zeros, mean, t
 from numpy.linalg import inv, det, eig
 from math import log, pi, sqrt, exp
 from random import random
-from scipy.optimize import minimize
-from MetropolisHastings import *
+#from MetropolisHastings import *
 from tools import *
 
 class InvalidVectorException(Exception):

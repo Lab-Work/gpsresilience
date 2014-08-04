@@ -277,15 +277,16 @@ if(ctrl==1){
 	makeplot("2011-08-21", "2011-09-11", "results/event_Irene.pdf", "Event Detection")
 	makeplot("2013-02-03", "2013-02-24", "results/event_Blizzard2.pdf", "Event Detection")
 	makeplot("2010-02-21", "2010-03-14", "results/event_Blizzard3.pdf", "Event Detection")
+	makeplot("2013-10-06", "2013-10-27", "results/event_October.pdf", "Event Detection")
 }
 
-ctrl=2
+ctrl=0
 if(ctrl==2){
 	makeThrashingPlot("2012-10-21", "2012-11-11", "results/events_stage1.csv", "results/events_stage2.csv", "results/events_stage3.csv", "results/thrashing.pdf")	
 
 }
 
-ctrl=0
+ctrl=3
 if(ctrl==3){
 	makeKernPlot("2012-10-21", "2012-11-11", "results/likelihood_kern.pdf", "Event Detection")
 }

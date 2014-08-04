@@ -5,7 +5,7 @@ Created on Fri Jun 27 15:30:51 2014
 @author: brian
 """
 from tools import *
-from likelihood_test import *
+from likelihood_test_parallel import *
 from datetime import datetime, timedelta
 from Queue import PriorityQueue
 from math import sqrt
@@ -202,8 +202,12 @@ def computeEventProperties(start_key, end_key, global_pace_timeseries, expected_
 	min_pace_dev = 0
 	
 	
-	worst_zscore = float('-inf')
-	worst_zscore_id = 0
+	
+	
+	#How many times does each trip appear as the worst trip?
+	#At the end, the trip with the most votes is declared the worst trip
+	worst_trip_votes = defaultdict(int)
+	
 	for d in dateRange(start_date, end_date + timedelta(hours=1), timedelta(hours=1)):
 		key = keyFromDatetime(d)
 		pace_dev = (global_pace_timeseries[key] - expected_pace_timeseries[key]) / 60.0 #Divide by 60 - convert minutes to seconds
@@ -211,12 +215,40 @@ def computeEventProperties(start_key, end_key, global_pace_timeseries, expected_
 		min_pace_dev = min(min_pace_dev, pace_dev)
 		
 		std_pace_vector = zscore_timeseries[key]
+		
+		if(start_date==datetime.strptime("2011-09-09 08:00:00", "%Y-%m-%d %H:%M:%S")):
+			print key
+			print std_pace_vector
+		
+		
+		
+		#Determine the worst trip in this hour
+		worst_zscore = float('-inf')
+		worst_zscore_id = 0
 		for i in range(len(std_pace_vector)):
 			if(std_pace_vector[i] > worst_zscore):
 				worst_zscore = std_pace_vector[i]
 				worst_zscore_id = i
+		
+		#That worst trip gets one vote
+		worst_trip_votes[worst_zscore_id] += 1
+
+
+	if(start_date==datetime.strptime("2011-09-09 08:00:00", "%Y-%m-%d %H:%M:%S")):
+		print start_date
+		print TRIP_NAMES
+		print worst_trip_votes
+		
+	max_votes = 0
+	max_votes_id = 0
+	for trip_id in worst_trip_votes:
+		if(worst_trip_votes[trip_id] > max_votes):
+			max_votes = worst_trip_votes[trip_id]
+			max_votes_id = trip_id
 			
-	return [start_date, end_date, duration, max_pace_dev, min_pace_dev, TRIP_NAMES[worst_zscore_id]]
+	
+	
+	return [start_date, end_date, duration, max_pace_dev, min_pace_dev, TRIP_NAMES[max_votes_id]]
 	
 	
 	
@@ -297,6 +329,10 @@ def detectEventsSwitching(lnp_timeseries, zscore_timeseries, global_pace_timeser
 	saveEvents(timeSegments, zscore_timeseries, global_pace_timeseries, "results/events_stage1.csv")
 	timeSegments.removeSmallSegmentsWithState(min_event_spacing, True)
 	saveEvents(timeSegments, zscore_timeseries, global_pace_timeseries, "results/events_stage2.csv")
+	saveEvents(timeSegments, zscore_timeseries, global_pace_timeseries, "results/events_sorted.csv")
+	
+	
+	
 	timeSegments.removeSmallSegmentsWithState(min_event_spacing, False)
 	saveEvents(timeSegments, zscore_timeseries, global_pace_timeseries, "results/events_stage3.csv")
 	
