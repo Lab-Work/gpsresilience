@@ -37,7 +37,7 @@ The dataset used in our analysis is made publicly available [here](https://uofi.
 - Driver and car ID
 
 All of this data should be downloaded and placed in a folder called "new_chron".  This folder is placed NEXT TO the gpsresilience folder, not inside it.  So, at this point the directory tree should look something like:
-
+<pre>
 <code>
 .
 |-- gpsresilience
@@ -61,7 +61,7 @@ All of this data should be downloaded and placed in a folder called "new_chron".
     |   |-- ...
     `-- header
 </code>
- 
+</pre>
  
  
  
@@ -125,6 +125,6 @@ At this point in time, it is possible to generate some plots to summarize the fe
 
 <code>
 Rscript color\_pace\_over\_time.R
-<\code>
+</code>
 
 This will generate several PDF images in the results folder (Create a results folder if it does not exist).  For example, results/color\_pace\_3weeeks.pdf shows the mean pace vectors for 3 typical weeks of the year.
