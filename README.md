@@ -19,6 +19,39 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 
-#3)Explanation of Files
 
-#4)How to Run the Code
+#3)How to Run the Code
+
+**Step 1 - Download the data**
+The dataset used in our analysis is made publicly available [here](https://uofi.box.com/s/zmggziub40wx1bq2h9bq).  This dataset contains record of almost 700 million taxi trips in New York City between 2010 and 2013 (inclusive).  Included information:
+- GPS coordinates for pickup and dropoff
+- Date and time for pickup and dropoff
+- Metered Distance
+- Driver and car ID
+
+All of this data should be downloaded and placed in a folder called "new_chron".  This folder is placed NEXT TO the gpsresilience folder, not inside it.  So, at this point the directory tree should look something like:
+.
+├── gpsresilience
+│   ├── eventDetection.py
+│   ├── extractGridFeaturesParallel.py
+│   ├── featureHistograms.py
+│   ├── likelihood_test_parallel.py
+│   ├── ...
+│   ├── results
+│   │   └── ...
+└── new_chron
+    ├── fix2011.py
+    ├── FOIL2010
+    │   ├── trip_fare_1.csv
+    │   ├── ...
+    ├── FOIL2011
+    │   ├── trip_fare_1.csv
+    │   ├── ...
+    ├── FOIL2012
+    │   ├── trip_fare_1.csv
+    │   ├── ...
+    └── FOIL2013
+        ├── trip_fare_1.csv
+        └── ...
+
+
