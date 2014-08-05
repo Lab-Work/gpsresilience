@@ -194,3 +194,10 @@ def splitRange(size, numSegments):
 		lo = int(size * float(i)/numSegments)
 		hi = int(size * float(i+1)/numSegments)
 		yield (lo,hi)
+
+
+def arbitraryElement(my_collection):
+	for e in my_collection:
+		break
+	return e
+	

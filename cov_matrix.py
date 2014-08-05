@@ -165,7 +165,7 @@ class MVGaussian():
 	#Params:
 		#otherMu - the mean of the other multivariate gaussian distribution
 		#otherSig - the covariance matrix of the other multivariate gaussian distribution
-		#returns - an expected scaled log-probability density
+	#Returns: - an expected scaled log-probability density
 	def expected_loglik_scaled(self, otherMu, otherSig):
 		if(self.inv_sig==None):
 			return float('-inf')
@@ -181,6 +181,11 @@ class MVGaussian():
 		
 		return (traceterm + mahal_term)[0,0]
 	
+	#Using diagonal components of the covariance matrix, compute the z-score for each entry of the vector
+	#(obs - mean)/stdev
+	#Params:
+		# vect - the vector to be standardized
+	#Returns: A standardized vector
 	def standardize_vector(self, vect):
 		tmp = zeros((len(vect), 1))
 		for i in range(len(vect)):
