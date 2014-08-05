@@ -33,27 +33,25 @@ All of this data should be downloaded and placed in a folder called "new_chron".
 
 <pre>
 .
-├── gpsresilience
-│   ├── eventDetection.py
-│   ├── extractGridFeaturesParallel.py
-│   ├── featureHistograms.py
-│   ├── likelihood_test_parallel.py
-│   ├── ...
-│   ├── results
-│   │   └── ...
-└── new_chron
-    ├── fix2011.py
-    ├── FOIL2010
-    │   ├── trip_fare_1.csv
-    │   ├── ...
-    ├── FOIL2011
-    │   ├── trip_fare_1.csv
-    │   ├── ...
-    ├── FOIL2012
-    │   ├── trip_fare_1.csv
-    │   ├── ...
-    └── FOIL2013
-        ├── trip_fare_1.csv
-        └── ...
+|-- gpsresilience
+|   |-- eventDetection.py
+|   |-- eventDetection.pyc
+|   |-- extractGridFeaturesParallel.py
+|   |-- ...
+`-- new_chron
+    |-- fix2011.py
+    |-- FOIL2010
+    |   |-- trip_fare_1.csv
+    |   |-- trip_fare_2.csv
+    |   |-- trip_fare_3.csv
+    |   |-- trip_fare_4.csv
+    |   |-- ...
+    |-- FOIL2011
+    |   |-- ...
+    |-- FOIL2012
+    |   |-- ...
+    |-- FOIL2013
+    |   |-- ...
+    `-- header
  </pre>
 
