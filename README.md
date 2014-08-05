@@ -30,28 +30,28 @@ The dataset used in our analysis is made publicly available [here](https://uofi.
 - Driver and car ID
 
 All of this data should be downloaded and placed in a folder called "new_chron".  This folder is placed NEXT TO the gpsresilience folder, not inside it.  So, at this point the directory tree should look something like:
-.
-├── gpsresilience
-│   ├── eventDetection.py
-│   ├── extractGridFeaturesParallel.py
-│   ├── featureHistograms.py
-│   ├── likelihood_test_parallel.py
-│   ├── ...
-│   ├── results
-│   │   └── ...
-└── new_chron
-    ├── fix2011.py
-    ├── FOIL2010
-    │   ├── trip_fare_1.csv
-    │   ├── ...
-    ├── FOIL2011
-    │   ├── trip_fare_1.csv
-    │   ├── ...
-    ├── FOIL2012
-    │   ├── trip_fare_1.csv
-    │   ├── ...
-    └── FOIL2013
-        ├── trip_fare_1.csv
-        └── ...
+>.
+>├── gpsresilience
+>│   ├── eventDetection.py
+>│   ├── extractGridFeaturesParallel.py
+>│   ├── featureHistograms.py
+>│   ├── likelihood_test_parallel.py
+>│   ├── ...
+>│   ├── results
+>│   │   └── ...
+>└── new_chron
+>    ├── fix2011.py
+>    ├── FOIL2010
+>    │   ├── trip_fare_1.csv
+.    │   ├── ...
+>    ├── FOIL2011
+>    │   ├── trip_fare_1.csv
+>    │   ├── ...
+>    ├── FOIL2012
+>    │   ├── trip_fare_1.csv
+>    │   ├── ...
+>    └── FOIL2013
+>        ├── trip_fare_1.csv
+>        └── ...
 
 
