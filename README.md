@@ -54,9 +54,5 @@ All of this data should be downloaded and placed in a folder called "new_chron".
     │   ├── ...
     └── FOIL2013
         ├── trip_fare_1.csv
-        └── ...
-
-
-
-sadfasdf
+        └── ... <\pre>
 
