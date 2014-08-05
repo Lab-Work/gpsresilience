@@ -20,6 +20,12 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 
 
+
+
+
+
+
+
 ##3)How to Run the Code
 
 ###**Step 1 - Download the data**
@@ -32,7 +38,7 @@ The dataset used in our analysis is made publicly available [here](https://uofi.
 
 All of this data should be downloaded and placed in a folder called "new_chron".  This folder is placed NEXT TO the gpsresilience folder, not inside it.  So, at this point the directory tree should look something like:
 
-<pre>
+<code>
 .
 |-- gpsresilience
 |   |-- eventDetection.py
@@ -54,17 +60,42 @@ All of this data should be downloaded and placed in a folder called "new_chron".
     |-- FOIL2013
     |   |-- ...
     `-- header
- </pre>
+</code>
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
  
 ###**Step 2 - Feature Histograms**
 
-This step is optional.  If you don't want feature histograms, you can skip to step 3.  The goal of this is the describe the distributions of features like distance, pace, winding factor, etc... across ALL trips. Analysis of these distributions helped us choose some of the error thresholds used in the data filtering step (see step 3).  To build the histograms, run:
+**This step is optional**.  If you don't want feature histograms, you can skip to step 3.  The goal of this is the describe the distributions of features like distance, pace, winding factor, etc... across ALL trips. Analysis of these distributions helped us choose some of the error thresholds used in the data filtering step (see step 3).  To build the histograms, run:
 
 <code>
 python featureHistograms.py
-<\code>
+</code>
 
-This takes a pretty long time to run because it has to process every single trip in the dataset.  On our 8-core 2.4 GHz machine, it took about 1 hour, using all cores.  Change NUM_PROCESSORS to the appropriate value for your machine.  Once the process is complete, it generates a folder called "hist\_results", which
+This takes a pretty long time to run because it has to process every single trip in the dataset.  On our 8-core 2.4 GHz machine, it took about 1 hour, using all cores.  Change NUM\_PROCESSORS to the appropriate value for your machine.
 
+Once the process is complete, it generates a folder called "hist\_results", which contains several CSV files.  These files describe the histograms of various features.  To visualize the results, run:
+
+<code>
+Rscript plotHists2.R
+</code>
+
+
+
+
+
+
+
+###**Step 3 - Data Filtering and Feature Extraction**
+
+In this step, the data is filtered and preprocessed into meaningful features, all at once.  The general idea is to break the city into 4 regions, given by 4regions_boundary.png
+
+![tmp](4regions_boundary.png)
 
 
