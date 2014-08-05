@@ -94,8 +94,37 @@ Rscript plotHists2.R
 
 ###**Step 3 - Data Filtering and Feature Extraction**
 
-In this step, the data is filtered and preprocessed into meaningful features, all at once.  The general idea is to break the city into 4 regions, given by 4regions_boundary.png
+In this step, the data is filtered and preprocessed into meaningful features, all at once.  The general idea is to break the city into 4 regions, given by 4regions_boundary.png:
 
 ![tmp](4regions_boundary.png)
 
+Note that the analysis literally uses this image to define boundaries, so the regions can be changed by simply editing the image.  Trips between the 4 regions (so there are 16 types of trips) are described with features such as the count, *mean pace*, *variance of pace*, and so on.  Trips that are invalid are discarded.  To perform the feature extraction, run:
 
+<code>
+python extractGridFeaturesParallel.py
+</code>
+
+Again, this process took about an hour on our 8-core machine.  When it's done, it creates a folder called "4year\_features".  This folder contains CSV files that describe the various features, and how they vary over time.
+
+
+
+###**Step 4 - Probabilistic Computations**
+
+In this step, historical distributions are fitted to the features from Step 3.  Individual days are measured as likely or unlikely based on where their features fall in these distributions.  To perform this step, run:
+
+<code>
+python likelihood\_test\_parallel.py
+</code>
+
+This took about 30 seconds to run on our 8-core machine.  It produces two files as outputs:
+- results/lnl\_over\_time\_leave1.csv : The time-series of how usual or unusual each hour timeslice is.  Also includes some global pace info at each timeslice.
+- results/zscore.csv : The time series of *standardized pace vectors*
+
+
+At this point in time, it is possible to generate some plots to summarize the features.  Run:
+
+<code>
+Rscript color\_pace\_over\_time.R
+<\code>
+
+This will generate several PDF images in the results folder (Create a results folder if it does not exist).  For example, results/color\_pace\_3weeeks.pdf shows the mean pace vectors for 3 typical weeks of the year.
