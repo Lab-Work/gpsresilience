@@ -121,10 +121,12 @@ This took about 30 seconds to run on our 8-core machine.  It produces two files 
 - results/zscore.csv : The time series of *standardized pace vectors*
 
 
-At this point in time, it is possible to generate some plots to summarize the features.  Run:
+At this point in time, it is possible to generate some plots to summarize the features and standardized features.  Run:
 
 <code>
 Rscript color\_pace\_over\_time.R
 </code>
 
-This will generate several PDF images in the results folder (Create a results folder if it does not exist).  For example, results/color\_pace\_3weeeks.pdf shows the mean pace vectors for 3 typical weeks of the year.
+This will generate several PDF images in the results folder (Create a results folder if it does not exist).  For example, results/color\_pace\_3weeeks.pdf shows the mean pace vectors for 3 typical weeks of the year.  The image results/color\_standardized\_pace\_over\_time.pdf shows the standardized pace vector during the week of Hurricane Sandy.
+
+###**Step 5 - Event Detection**
