@@ -68,6 +68,8 @@ def generateTimeSlice((pace_timeseries, pace_grouped, groupedStats, start_id, en
 		(mu, sig_full) = computeLeave1Stats(s_x, s_xxt, count, obs, weekday, hour)
 
 		
+		
+		
 		#Extract diagonal components of the covariance matrix (independence assumption)
 		sig_diag = diag(diag(sig_full))
 		
@@ -79,6 +81,7 @@ def generateTimeSlice((pace_timeseries, pace_grouped, groupedStats, start_id, en
 		
 		#Compute standardized pace vector (zscores) and save it
 		std_pace_vect = fullDistrib.standardize_vector(obs)
+		#print std_pace_vect
 		zscores = [float(std_pace_vect[i]) for i in range(len(std_pace_vect))]		
 		zscore_timeseries[date, hour, weekday] = zscores
 		
@@ -299,7 +302,6 @@ def computeGroupedStats(pace_grouped):
 		for meanPaceVector in group:
 			s_x[key] += meanPaceVector
 			s_xxt[key] += meanPaceVector * transpose(meanPaceVector)
-			count[key] += 1
 
 	#Return the thre statistics
 	return (s_x, s_xxt, count)
@@ -337,7 +339,7 @@ def computeLeave1Stats(s_x, s_xxt, count, x, weekday, hour):
 	return (mu, sigma)
 
 
-
+#Temporary
 def scale_kern_timeseries(kern_timeseries):
 	max_val = defaultdict(lambda : float('-inf'))
 	
@@ -354,7 +356,6 @@ def scale_kern_timeseries(kern_timeseries):
 		val_list[weekday, hour].sort()
 		median = getQuantile(val_list[weekday, hour], .5)
 		medians[weekday, hour] = median
-		print median
 	
 	pickle.dump(val_list, open("misc_code/val_list.pickle", "w"))
 		

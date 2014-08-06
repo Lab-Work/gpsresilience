@@ -446,7 +446,7 @@ def saveEvents(timeSegments, zscore_timeseries, global_pace_timeseries, out_file
 	#min_event_spacing - the minimum length between events before we decide to merge them
 	#threshold_quant - A quantile of lnp_timeseries used to detect events.  Lower values are more selective (detect only the most unusual events) and higher values are more sensitive (detect more events)
 	#out_file - The filename where the detected events will be saved
-def detectEventsSwitching(lnp_timeseries, zscore_timeseries, global_pace_timeseries, min_event_spacing=6, threshold_quant=.05, unfiltered_out_file, filtered_out_file):
+def detectEventsSwitching(lnp_timeseries, zscore_timeseries, global_pace_timeseries, unfiltered_out_file, filtered_out_file, min_event_spacing=6, threshold_quant=.05):
 	#Sort the keys of the timeseries chronologically	
 	sorted_dates = sorted(lnp_timeseries)
 	
@@ -520,7 +520,7 @@ if(__name__=="__main__"):
 
 	#Perform the event detection on the lnp_timeseries, using extra info to describe the events
 	#Events are detected as the 5% lowest values of R(t), and events less than 6 hours apart are merged	
-	logMsg("Detecting events at 5% bound")s
-	detectEventsSwitching(lnp_timeseries, zscore_timeseries, global_pace_timeseries, min_event_spacing=6, threshold_quant=.05, UNFILTERED_OUT_EVENTS, FILTERED_OUT_EVENTS)
+	logMsg("Detecting events at 5% bound")
+	detectEventsSwitching(lnp_timeseries, zscore_timeseries, global_pace_timeseries, UNFILTERED_OUT_EVENTS, FILTERED_OUT_EVENTS, min_event_spacing=6, threshold_quant=.05)
 	logMsg("Done.")
 
