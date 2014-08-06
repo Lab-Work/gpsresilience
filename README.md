@@ -130,3 +130,14 @@ Rscript color\_pace\_over\_time.R
 This will generate several PDF images in the results folder (Create a results folder if it does not exist).  For example, results/color\_pace\_3weeeks.pdf shows the mean pace vectors for 3 typical weeks of the year.  The image results/color\_standardized\_pace\_over\_time.pdf shows the standardized pace vector during the week of Hurricane Sandy.
 
 ###**Step 5 - Event Detection**
+
+In this step, the time-series probabilities produced in Step 4 are thresholded, and a finite number of events are detected.  Intuitively, ranges of time where the probability is below the threshold are events.  To prevent thrashing over the threshold, events with less than 6 hours between them are merged into one large event.  Other properties of events like peak global pace deviation are computed.  To run the event detection, run:
+
+<code>
+python eventDetection.py
+</code>
+
+This took about 1 second on our machine.  The output is two CSV files, which contain events sorted by duration:
+- results/events\_nomerged.csv : The events before nearby (less than 6 hours apart) ones are merged
+- results/events\_sorted.csv : The events after the merging
+
