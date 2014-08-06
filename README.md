@@ -20,6 +20,12 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE SOFTWARE.
 
 
+
+
+
+
+
+
 ##3)How to Run the Code
 
 ###**Step 1 - Download the data**
@@ -31,8 +37,8 @@ The dataset used in our analysis is made publicly available [here](https://uofi.
 - Driver and car ID
 
 All of this data should be downloaded and placed in a folder called "new_chron".  This folder is placed NEXT TO the gpsresilience folder, not inside it.  So, at this point the directory tree should look something like:
-
 <pre>
+<code>
 .
 |-- gpsresilience
 |   |-- eventDetection.py
@@ -54,17 +60,84 @@ All of this data should be downloaded and placed in a folder called "new_chron".
     |-- FOIL2013
     |   |-- ...
     `-- header
- </pre>
+</code>
+</pre>
+ 
+ 
+ 
+ 
+ 
+ 
+ 
  
 ###**Step 2 - Feature Histograms**
 
-This step is optional.  If you don't want feature histograms, you can skip to step 3.  The goal of this is the describe the distributions of features like distance, pace, winding factor, etc... across ALL trips. Analysis of these distributions helped us choose some of the error thresholds used in the data filtering step (see step 3).  To build the histograms, run:
+**This step is optional**.  If you don't want feature histograms, you can skip to step 3.  The goal of this is the describe the distributions of features like distance, pace, winding factor, etc... across ALL trips. Analysis of these distributions helped us choose some of the error thresholds used in the data filtering step (see step 3).  To build the histograms, run:
 
 <code>
 python featureHistograms.py
-<\code>
+</code>
 
-This takes a pretty long time to run because it has to process every single trip in the dataset.  On our 8-core 2.4 GHz machine, it took about 1 hour, using all cores.  Change NUM_PROCESSORS to the appropriate value for your machine.  Once the process is complete, it generates a folder called "hist\_results", which
+This takes a pretty long time to run because it has to process every single trip in the dataset.  On our 8-core 2.4 GHz machine, it took about 1 hour, using all cores.  Change NUM\_PROCESSORS to the appropriate value for your machine.
+
+Once the process is complete, it generates a folder called "hist\_results", which contains several CSV files.  These files describe the histograms of various features.  To visualize the results, run:
+
+<code>
+Rscript plotHists2.R
+</code>
 
 
+
+
+
+
+
+###**Step 3 - Data Filtering and Feature Extraction**
+
+In this step, the data is filtered and preprocessed into meaningful features, all at once.  The general idea is to break the city into 4 regions, given by 4regions_boundary.png:
+
+![tmp](4regions_boundary.png)
+
+Note that the analysis literally uses this image to define boundaries, so the regions can be changed by simply editing the image.  Trips between the 4 regions (so there are 16 types of trips) are described with features such as the count, *mean pace*, *variance of pace*, and so on.  Trips that are invalid are discarded.  To perform the feature extraction, run:
+
+<code>
+python extractGridFeaturesParallel.py
+</code>
+
+Again, this process took about an hour on our 8-core machine.  When it's done, it creates a folder called "4year\_features".  This folder contains CSV files that describe the various features, and how they vary over time.
+
+
+
+###**Step 4 - Probabilistic Computations**
+
+In this step, historical distributions are fitted to the features from Step 3.  Individual days are measured as likely or unlikely based on where their features fall in these distributions.  To perform this step, run:
+
+<code>
+python likelihood\_test\_parallel.py
+</code>
+
+This took about 30 seconds to run on our 8-core machine.  It produces two files as outputs:
+- results/lnl\_over\_time\_leave1.csv : The time-series of how usual or unusual each hour timeslice is.  Also includes some global pace info at each timeslice.
+- results/zscore.csv : The time series of *standardized pace vectors*
+
+
+At this point in time, it is possible to generate some plots to summarize the features and standardized features.  Run:
+
+<code>
+Rscript color\_pace\_over\_time.R
+</code>
+
+This will generate several PDF images in the results folder (Create a results folder if it does not exist).  For example, results/color\_pace\_3weeeks.pdf shows the mean pace vectors for 3 typical weeks of the year.  The image results/color\_standardized\_pace\_over\_time.pdf shows the standardized pace vector during the week of Hurricane Sandy.
+
+###**Step 5 - Event Detection**
+
+In this step, the time-series probabilities produced in Step 4 are thresholded, and a finite number of events are detected.  Intuitively, ranges of time where the probability is below the threshold are events.  To prevent thrashing over the threshold, events with less than 6 hours between them are merged into one large event.  Other properties of events like peak global pace deviation are computed.  To run the event detection, run:
+
+<code>
+python eventDetection.py
+</code>
+
+This took about 1 second on our machine.  The output is two CSV files, which contain events sorted by duration:
+- results/events\_nomerged.csv : The events before nearby (less than 6 hours apart) ones are merged
+- results/events\_sorted.csv : The events after the merging
 
