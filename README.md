@@ -42,8 +42,7 @@ All of this data should be downloaded and placed in a folder called "new_chron".
 .
 |-- gpsresilience
 |   |-- eventDetection.py
-|   |-- eventDetection.pyc
-|   |-- extractGridFeaturesParallel.py
+|   |-- extractRegionFeaturesParallel.py
 |   |-- ...
 `-- new_chron
     |-- fix2011.py
@@ -101,7 +100,7 @@ In this step, the data is filtered and preprocessed into meaningful features, al
 Note that the analysis literally uses this image to define boundaries, so the regions can be changed by simply editing the image.  Trips between the 4 regions (so there are 16 types of trips) are described with features such as the count, *mean pace*, *variance of pace*, and so on.  Trips that are invalid are discarded.  To perform the feature extraction, run:
 
 <code>
-python extractGridFeaturesParallel.py
+python extractRegionFeaturesParallel.py
 </code>
 
 Again, this process took about an hour on our 8-core machine.  When it's done, it creates a folder called "4year\_features".  This folder contains CSV files that describe the various features, and how they vary over time.
