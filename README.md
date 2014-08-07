@@ -140,3 +140,11 @@ This took about 1 second on our machine.  The output is two CSV files, which con
 - results/events\_nomerged.csv : The events before nearby (less than 6 hours apart) ones are merged
 - results/events\_sorted.csv : The events after the merging
 
+
+It is now possible to make plots of the probabilities and events.  To do this, run:
+
+<code>
+Rscript plot\_likelihood\_cov.R
+</code>
+
+This will generate several more plots in the results folder.
