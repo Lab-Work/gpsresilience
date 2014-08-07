@@ -1,11 +1,22 @@
+"""
+Reads millions of individual trips and categorizes them based on start region, end region, and departure time.
+In each of these categories, aggregate features like average pace and trip count are computed.
+This is the heaviest computation, but it can make use of parallel processing.
+
+Created on Sat May  3 12:33:42 2014
+
+@author: Brian Donovan (briandonovan100@gmail.com)
+"""
+
 import csv
 import os
 import shutil
-from datetime import datetime
+from multiprocessing import Pool
+import traceback
+
 from grid import *
 from regions import *
-from multiprocessing import Pool
-import shutil
+from trip import *
 
 
 #Global settings
@@ -21,49 +32,53 @@ NUM_PROCESSORS = 8				#Number of cores to employ for parallel processing
 	#slice_id - a unique identifier for this (year,  month) pair.  Used to name the tmp files
 #Returns: The name of the tmp directory created for this month
 def processMonth((year, month, slice_id)):
-	#The year and month give the input file
-	infile = "../new_chron/FOIL" + str(year) + "/trip_data_" + str(month) + ".csv"	
-	
-	#The slice_id gives us the output directory - make it
-	outdir = TMP_DIR + "/slice_" + str(slice_id)
-	shutil.rmtree(outdir, ignore_errors=True)
-	os.mkdir(outdir)
-	
-	#Begin the RegionSystem for this output directory - this will start outputting files there
-	gridSystem = RegionSystem(outdir)
-	
-	logMsg('Parsing file ' + infile)
-	
-	#Open the input file as a CSV
-	with open(infile, 'r') as filePointer:
-		csvReader = csv.reader(filePointer)
+	try:
+																							#The year and month give the input file
+		infile = "../new_chron/FOIL" + str(year) + "/trip_data_" + str(month) + ".csv"	
 		
-		#Read the header and extract column ids from it
-		header = csvReader.next()
-		Trip.initHeader(header)
+		#The slice_id gives us the output directory - make it
+		outdir = TMP_DIR + "/slice_" + str(slice_id)
+		shutil.rmtree(outdir, ignore_errors=True)
+		os.mkdir(outdir)
 		
-		#Read the rest of the file
-		for line in csvReader:
-
-			try:
-				trip = Trip(line) #Parse the csv line into a trip object
-			except ValueError:
-				trip = None      #A trip of None indicates a parsing error
+		#Begin the RegionSystem for this output directory - this will start outputting files there
+		gridSystem = RegionSystem(outdir)
+		
+		logMsg('Parsing file ' + infile)
+		
+		#Open the input file as a CSV
+		with open(infile, 'r') as filePointer:
+			csvReader = csv.reader(filePointer)
+			
+			#Read the header and extract column ids from it
+			header = csvReader.next()
+			Trip.initHeader(header)
+			
+			#Read the rest of the file
+			for line in csvReader:
+	
+				try:
+					trip = Trip(line) #Parse the csv line into a trip object
+				except ValueError:
+					trip = None      #A trip of None indicates a parsing error
+					
 				
-			
-			#Ignore trips that are placed in the wrong month file
-			if(trip!= None and (year!=trip.date.year or month!=trip.date.month)):
-				trip.has_other_error = True
-			
-			#Record the trip - if trip==None, an error will be recorded
-			gridSystem.record(trip)
+				#Ignore trips that are placed in the wrong month file
+				if(trip!= None and (year!=trip.pickup_time.year or month!=trip.pickup_time.month)):
+					trip.has_other_error = True
+				
+				#Record the trip - if trip==None, an error will be recorded
+				gridSystem.record(trip)
+		
+		#Finalize the output
+		gridSystem.close()
 	
-	#Finalize the output
-	gridSystem.close()
-
-	#Return the name of the temporary directory that was created for this month	
-	return outdir
-
+		#Return the name of the temporary directory that was created for this month	
+		return outdir
+	except Exception as e:
+		traceback.print_exc()
+	   	print()
+		raise e
 
 #Takes all of the temporary output directories created by processMonth() and merges them into one
 #(Many folders, each with 6 files) --> (one folder with 6 large files)

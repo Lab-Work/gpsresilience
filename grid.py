@@ -13,8 +13,9 @@ from pandas import to_datetime
 from sets import Set
 import csv
 import os
-from tools import *
 
+from tools import *
+from trip import *
 
 weekdayname = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
 
@@ -101,6 +102,8 @@ HOUR_GRANULARITY = timedelta(hours = 1)
 #It contains a number of Cells (or regions), as well as Entries (pairs of cells)
 #It has the ability to record a trip, which updates the relevant entry
 #It can also output the current entries, and reset the current entries so the next hour can be processed
+#This behavior is fully encapsulated - THE ONLY METHOD THAT NEES TO BE CALLED FROM OUTSIDE OF THE CLASS IS record().
+#All files will be written automatically
 class GridSystem:
 	currentTime = None #Stores the internal time state of this GridSystem	
 	#This is the hour that we are currently processing trips for - it is advanced when necessary
@@ -134,7 +137,9 @@ class GridSystem:
 				#add to list of cells
 				self.cells.append(cell)
 		self.entries = {}
-		self.dates = []
+		
+		self.dirName="4year_cells"
+		self.begin()
 	
 	#Initialize the GridSystem for outputting features.  Opens a file for each type of feature.
 	#This method should be called before record()
@@ -269,7 +274,7 @@ class GridSystem:
 				
 		
 		
-		trip_hour = roundTime(trip, HOUR_GRANULARITY)
+		trip_hour = roundTime(trip.pickup_time, HOUR_GRANULARITY)
 		
 		#If the trip's time is less than the current Time, then trips were received out of order.  Print error message.
 		if(trip_hour < self.currentTime):
@@ -289,7 +294,7 @@ class GridSystem:
 
 			
 			if(self.currentTime.hour==0):
-				logMsg("Advancing to " + str(self.currentDate))
+				logMsg("Advancing to " + str(self.currentTime))
 		
 		#Figure out which entry this trip is assigned to, based on origin-destination coordinates
 		entry = self.getEntry(trip.fromLon, trip.fromLat, trip.toLon, trip.toLat)
@@ -319,19 +324,19 @@ class GridSystem:
 
 				
 	
-	#Writes the features from all entries into the currently open files.
+	#Writes the features from all entries into the currently open files (see begin()).
 	#Should be called at the END of an hour, before reset() is called.
 	def commitEntry(self):
 		
 		#Ignore the end of the 0th hour, where no data has been recorded yet...
-		if(not self.currentDate is None):
+		if(not self.currentTime is None):
 			
-			weekday = weekdayname[self.currentDate.weekday()]
+			weekday = weekdayname[self.currentTime.weekday()]
 			
 						
 			#Write pace features, and pace variance features - this is one value for each entry (pair of regions)
-			line = [str(self.currentDate.date()), self.currentDate.hour, weekday]
-			vline = [str(self.currentDate.date()), self.currentDate.hour, weekday]
+			line = [str(self.currentTime.date()), self.currentTime.hour, weekday]
+			vline = [str(self.currentTime.date()), self.currentTime.hour, weekday]
 			for fromCell in self.cells:
 				for toCell in self.cells:
 					entry = self.entries[(fromCell, toCell)]
@@ -354,7 +359,7 @@ class GridSystem:
 			self.paceVarFp.flush()
 	
 			#Write count features - one value for each entry (pair of regions)
-			line = [str(self.currentDate.date()), self.currentDate.hour, weekday]
+			line = [str(self.currentTime.date()), self.currentTime.hour, weekday]
 			for fromCell in self.cells:
 				for toCell in self.cells:
 					entry = self.entries[(fromCell, toCell)]
@@ -363,7 +368,7 @@ class GridSystem:
 			self.countFp.flush()
 					
 			#Write "total miles" features - one value for each entry (pair of regions)
-			line = [str(self.currentDate.date()), self.currentDate.hour, weekday]
+			line = [str(self.currentTime.date()), self.currentTime.hour, weekday]
 			for fromCell in self.cells:
 				for toCell in self.cells:
 					entry = self.entries[(fromCell, toCell)]
@@ -373,7 +378,7 @@ class GridSystem:
 			
 			
 			#Write unique driver count features - one value for each entry (pair of regions)
-			line = [str(self.currentDate.date()), self.currentDate.hour, weekday]
+			line = [str(self.currentTime.date()), self.currentTime.hour, weekday]
 			for fromCell in self.cells:
 				for toCell in self.cells:
 					entry = self.entries[(fromCell, toCell)]
@@ -399,9 +404,9 @@ class GridSystem:
 				avg_wind = 0
 				sdev_wind = 0
 			
-			self.globalF.writerow([str(self.currentDate.date()), self.currentDate.hour, weekday, self.globalEntry.numtrips, pace, self.globalEntry.s_dist, len(self.globalEntry.drivers), avg_wind, sdev_wind] + self.globalEntry.error_counts)
+			self.globalF.writerow([str(self.currentTime.date()), self.currentTime.hour, weekday, self.globalEntry.numtrips, pace, self.globalEntry.s_dist, len(self.globalEntry.drivers), avg_wind, sdev_wind] + self.globalEntry.error_counts)
 			self.globalFp.flush()
 		else:
-			print("self.currentDate is None")
+			print("self.currentTime is None")
 			
 		

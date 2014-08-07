@@ -5,7 +5,7 @@ Created on Tue Jul 22 20:10:23 2014
 @author: brian
 """
 
-from cov_matrix import *
+from mvGaussian import *
 from numpy import array_equal
 
 class MVGaussianKernel:
@@ -35,5 +35,4 @@ class MVGaussianKernel:
 
 
 if (__name__=="__main__"):
-	M
-		
+	pass		

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
+Performs the likelihood computation on mean pace vectors.  It should be run AFTER extractRegionFeaturesParallel.py
+
 Created on Wed May 21 17:37:25 2014
 
-@author: brian
+@author: Brian Donovan (briandonovan100@gmail.com)
 """
 import numpy
-from numpy import matrix, transpose, mean, diag
+from numpy import matrix, transpose, diag
 import os, csv
 from collections import defaultdict
 import pickle
@@ -13,7 +15,7 @@ from multiprocessing import Pool
 from gaussian_kernel import *
 
 
-from cov_matrix import *
+from mvGaussian import *
 from eventDetection import *
 from tools import *
 

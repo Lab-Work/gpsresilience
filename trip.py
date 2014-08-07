@@ -59,7 +59,7 @@ class Trip:
 		
 	
 		#Straightline distance between pickup and dropoff coordinates		
-		self.straight_line_dist = approxdist(self.fromLat, self.fromLon,self.toLat, self.toLon)
+		self.straight_line_dist = approxdist_nyc((self.fromLat, self.fromLon),(self.toLat, self.toLon))
 		
 		#Winding factor = ratio of true distance over straightline distance (typically something like 1.5)
 		if(self.straight_line_dist<=0):
@@ -97,16 +97,21 @@ class Trip:
 	ERR_HI_PACE=22
 	ERR_DATE = 23
 	ERR_OTHER = 24
+	
+	#This method implements data filtering
 	#Tells whether the trip is valid, by applying various thresholds to the features.
 	#Returns: An integer error code.  0 means it is a valid trip, 1-24 are different types of errors, listed above
 	def isValid(self):
-		#First filter obvious errors
+		#These two months contain a very high number of errors, so they cannot be trusted
 		if(self.pickup_time.year==2010 and self.pickup_time.month==8):
 			return Trip.ERR_DATE
 		if(self.pickup_time.year==2010 and self.pickup_time.month==9):
 			return Trip.ERR_DATE
 		
 		
+		#First filter obvious errors
+		
+		#GPS coordinates (in degrees) not reasonable
 		if(self.toLat < 40.4 or self.fromLat < 40.4):
 			return Trip.ERR_GPS
 		if(self.toLat > 41.1 or self.fromLat > 41.1):
@@ -116,24 +121,30 @@ class Trip:
 		if(self.toLon > -73.5 or self.fromLon > -73.5):
 			return Trip.ERR_GPS
 
+		#Distance between start and end coordinates (in miles) not reasonable
 		if(self.straight_line_dist < .001):
 			return Trip.ERR_LO_STRAIGHTLINE
 		if(self.straight_line_dist > 20):
 			return Trip.ERR_HI_STRAIGHTLINE
 				
+		#Metered distance (in miles) not reasonable
 		if(self.dist < .001):
 			return Trip.ERR_LO_DIST
 		if(self.dist > 20):
 			return Trip.ERR_HI_DIST
 		
+		#In euclidean space, the winding factor (metered dist / straightline dist) must be >= 1
+		#We allow some small room for rounding errors and GPS noise
 		if(self.winding_factor < .95):
 			return Trip.ERR_LO_WIND
 
+		#Unreasonable trip time (in seconds)
 		if(self.time < 10):
 			return Trip.ERR_LO_TIME
 		if(self.time > 7200):
 			return Trip.ERR_HI_TIME
 		
+		#Unreasonable pace (in second/mile)
 		if(self.pace < 10):
 			return Trip.ERR_LO_PACE
 		if(self.pace > 7200):
@@ -142,6 +153,8 @@ class Trip:
 		
 		#Next filter data that is not necessarily an error
 		#But is still not useful for the analysis
+		
+		#Restrict analysis to Manhattan and a small surrounding area
 		if(self.toLat < 40.6 or self.fromLat < 40.6):
 			return Trip.BAD_GPS
 		if(self.toLat > 40.9 or self.fromLat > 40.9):
@@ -150,28 +163,26 @@ class Trip:
 			return Trip.BAD_GPS
 		if(self.toLon > -73.7 or self.fromLon > -73.7):
 			return Trip.BAD_GPS
-			
-		if(self.straight_line_dist < .001):
-			return Trip.BAD_LO_STRAIGHTLINE
+		
+		#Really long trips (in miles) are not representative
 		if(self.straight_line_dist > 8):
 			return Trip.BAD_HI_STRAIGHTLINE
 				
-		if(self.dist < .001):
-			return Trip.BAD_LO_DIST
 		if(self.dist > 15):
 			return Trip.BAD_HI_DIST
 		
-		if(self.winding_factor < .95):
-			return Trip.BAD_LO_WIND
+		#A high winding factor indicates that the taxi did not proceed directly to its destination
+		#So it is not representative of its start and end regions
 		if(self.winding_factor > 5):
 			return Trip.BAD_HI_WIND
 			
-
+		#Really short or really long trips are not representative
 		if(self.time < 60):
 			return Trip.BAD_LO_TIME
 		if(self.time > 3600):
 			return Trip.BAD_HI_TIME
 		
+		#These speeds are technically possible, but not indicative of overall traffic
 		if(self.pace < 40):
 			return Trip.BAD_LO_PACE
 		if(self.pace > 3600):
