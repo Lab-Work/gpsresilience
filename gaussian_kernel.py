@@ -6,7 +6,7 @@ Created on Tue Jul 22 20:10:23 2014
 """
 
 from mvGaussian import *
-from numpy import array_equal
+from numpy import matrix, array_equal, diag
 
 class MVGaussianKernel:
 	def __init__(self, obs, spherical_bandwidth=10):

@@ -13,7 +13,7 @@ from collections import defaultdict
 import pickle
 from multiprocessing import Pool
 from gaussian_kernel import *
-
+import traceback
 
 from mvGaussian import *
 from eventDetection import *
@@ -21,9 +21,12 @@ from tools import *
 
 
 NUM_PROCESSORS = 8
-IN_DIR = "4year_features"
-OUT_PROB_FILE = "results/lnl_over_time_leave1.csv"
-OUT_ZSCORE_FILE = "results/std_pace_vector.csv"
+IN_DIR = "4year_features"	#Location of features folder (output of extractRegionFeaturesParallel)
+OUT_PROB_FILE = "results/lnl_over_time_leave1.csv"	#Where to output probability file
+OUT_ZSCORE_FILE = "results/std_pace_vector.csv"		#Where to ouput zscores file
+
+#Use Kernel Density Estimate, in addition to Gaussian Distributions?
+#Note : This is much slower
 COMPUTE_KERNEL = False
 
 
@@ -37,74 +40,80 @@ COMPUTE_KERNEL = False
 	#start_id - the start of the slice to be computed by this thread
 	#end_id - the end of the slice to be computed by this thread
 def generateTimeSlice((pace_timeseries, pace_grouped, groupedStats, start_id, end_id)):
-	(s_x, s_xxt, count) = groupedStats
-		
-	
-	
-	if(COMPUTE_KERNEL):
-		kernels = {}
-		for key in pace_grouped:
-			kernels[key] = MVGaussianKernel(pace_grouped[key])
-	
-	#Dictionaries which will store the output for this slice
-	#These dictionaries are all keyed by (date, hour, weekday)
-	full_timeseries = {}
-	ind_timeseries = {}
-	kernel_timeseries = {}
-	zscore_timeseries = {}	
-	
-	#Iterate through the time-series in chronological order
-	sorted_dates = sorted(pace_timeseries)
-	#But only consider the slice assigned to this iprocess		
-	for i in range(start_id, end_id):
-		(date, hour, weekday) = sorted_dates[i] 
-
-		#Progress message
-		logPerc(i - start_id, end_id - start_id, 1)
+	try:
+		(s_x, s_xxt, count) = groupedStats
+			
 		
 		
-		obs = pace_timeseries[(date, hour, weekday)] #The observed mean pace vector at a given point in time
-					
-		
-		#Use the grouped stats and the current vector (obs) to compute the leave-1-out mean and covariance
-		(mu, sig_full) = computeLeave1Stats(s_x, s_xxt, count, obs, weekday, hour)
-
-		
-		
-		
-		#Extract diagonal components of the covariance matrix (independence assumption)
-		sig_diag = diag(diag(sig_full))
-		
-
-		#Create the distributions for both covariance matrices
-		fullDistrib = MVGaussian(mu, sig_full)
-		indDistrib = MVGaussian(mu, sig_diag)
-
-		
-		#Compute standardized pace vector (zscores) and save it
-		std_pace_vect = fullDistrib.standardize_vector(obs)
-		#print std_pace_vect
-		zscores = [float(std_pace_vect[i]) for i in range(len(std_pace_vect))]		
-		zscore_timeseries[date, hour, weekday] = zscores
-		
-
-		#Use the two gaussian distributions to compute the log-probability
-		try:
-			full_timeseries[(date, hour, weekday)] = fullDistrib.gaussian_loglik_scaled(obs)
-			ind_timeseries[(date, hour, weekday)] = indDistrib.gaussian_loglik_scaled(obs)
-								
-		except (ZeroDivisionError):
-			full_timeseries[(date, hour,weekday)] = 1
-			ind_timeseries[(date, hour,weekday)] = 1
-		
-		#If desired, also compute the kernel density estimate
 		if(COMPUTE_KERNEL):
-			kernel = kernels[weekday, hour]
-			kernel_timeseries[date, hour, weekday] = kernel.loglik_scaled(obs)
-		else:
-			kernel_timeseries[date, hour, weekday] = 1
-
-	#Return the dictionaries computed by this process.  The caller is responsible for merging, if multiprocessing is used
+			kernels = {}
+			for key in pace_grouped:
+				kernels[key] = MVGaussianKernel(pace_grouped[key])
+		
+		#Dictionaries which will store the output for this slice
+		#These dictionaries are all keyed by (date, hour, weekday)
+		full_timeseries = {}
+		ind_timeseries = {}
+		kernel_timeseries = {}
+		zscore_timeseries = {}	
+		
+		#Iterate through the time-series in chronological order
+		sorted_dates = sorted(pace_timeseries)
+		#But only consider the slice assigned to this iprocess		
+		for i in range(start_id, end_id):
+			(date, hour, weekday) = sorted_dates[i] 
+	
+			#Progress message
+			logPerc(i - start_id, end_id - start_id, 1)
+			
+			
+			obs = pace_timeseries[(date, hour, weekday)] #The observed mean pace vector at a given point in time
+						
+			
+			#Use the grouped stats and the current vector (obs) to compute the leave-1-out mean and covariance
+			(mu, sig_full) = computeLeave1Stats(s_x, s_xxt, count, obs, weekday, hour)
+	
+			
+			
+			
+			#Extract diagonal components of the covariance matrix (independence assumption)
+			sig_diag = diag(diag(sig_full))
+			
+	
+			#Create the distributions for both covariance matrices
+			fullDistrib = MVGaussian(mu, sig_full)
+			indDistrib = MVGaussian(mu, sig_diag)
+	
+			
+			#Compute standardized pace vector (zscores) and save it
+			std_pace_vect = fullDistrib.standardize_vector(obs)
+			#print std_pace_vect
+			zscores = [float(std_pace_vect[i]) for i in range(len(std_pace_vect))]		
+			zscore_timeseries[date, hour, weekday] = zscores
+			
+	
+			#Use the two gaussian distributions to compute the log-probability
+			try:
+				full_timeseries[(date, hour, weekday)] = fullDistrib.gaussian_loglik_scaled(obs)
+				ind_timeseries[(date, hour, weekday)] = indDistrib.gaussian_loglik_scaled(obs)
+									
+			except (ZeroDivisionError):
+				full_timeseries[(date, hour,weekday)] = 1
+				ind_timeseries[(date, hour,weekday)] = 1
+			
+			#If desired, also compute the kernel density estimate
+			if(COMPUTE_KERNEL):
+				kernel = kernels[weekday, hour]
+				kernel_timeseries[date, hour, weekday] = kernel.loglik_scaled(obs)
+			else:
+				kernel_timeseries[date, hour, weekday] = 1
+	
+		#Return the dictionaries computed by this process.  The caller is responsible for merging, if multiprocessing is used
+	
+	except Exception as e:
+		traceback.print_exc()
+	   	print()
+		raise e
 	return (full_timeseries, ind_timeseries, kernel_timeseries, zscore_timeseries)
 
 
@@ -163,14 +172,12 @@ def readPaceData(dirName):
 	logMsg("Reading files from " + dirName + " ...")
 	#Create filenames
 	paceFileName = os.path.join(dirName, "pace_features.csv")
-	paceVarFileName = os.path.join(dirName, "pace_var_features.csv")	
-	countFileName = os.path.join(dirName, "count_features.csv")
+
 	
 	#Initialize dictionaries	
 	pace_timeseries = {}
 	pace_grouped = defaultdict(list)
-	var_timeseries = {}
-	count_timeseries = {}	
+
 	
 	#Read the pace file
 	r = csv.reader(open(paceFileName, "r"))
@@ -197,47 +204,8 @@ def readPaceData(dirName):
 			pace_grouped[(weekday, hour)].append(v)
 
 	
-	
-	#Read pace variance file
-	r = csv.reader(open(paceVarFileName, "r"))
-	colIds = getHeaderIds(r.next())
-
-	#Red the file line by line
-	for line in r:
-		#Extract info
-		#First 3 columns
-		date = line[colIds["Date"]]
-		hour = int(line[colIds["Hour"]])
-		weekday = line[colIds["Weekday"]]
-		
-		#the rest of the columns contain pace variances
-		paces = map(float, line[3:])
-		
-		#Convert to numpy column vector
-		v = transpose(matrix(paces))
-		#Save vector in the timeseries
-		var_timeseries[(date, hour, weekday)] = v
-	
-	#Read the trip count file	
-	r = csv.reader(open(countFileName, "r"))
-	colIds = getHeaderIds(r.next())
-	for line in r:
-		#Extract info
-		#First 3 columns
-		date = line[colIds["Date"]]
-		hour = int(line[colIds["Hour"]])
-		weekday = line[colIds["Weekday"]]
-		
-		#Last The rest of the columns contain trip counts
-		counts = map(float, line[3:])
-		
-		#Convert to numpy column vector
-		v = transpose(matrix(counts))
-		#Save vector in the timeseries
-		count_timeseries[(date, hour, weekday)] = v
-	
 	#return time series and grouped data
-	return (pace_timeseries, var_timeseries, count_timeseries, pace_grouped)
+	return (pace_timeseries, pace_grouped)
 
 
 #Reads the time-series global pace from a file and sorts it into a convenient format
@@ -383,7 +351,7 @@ def generateTimeSeriesLeave1(inDir):
 	
 	#Read the time-series data from the file
 	logMsg("Reading files...")
-	(pace_timeseries, var_timeseries, count_timeseries, pace_grouped) = readPaceData(inDir)
+	(pace_timeseries, pace_grouped) = readPaceData(inDir)
 	
 	
 	

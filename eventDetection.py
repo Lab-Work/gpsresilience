@@ -295,7 +295,7 @@ for orig in ['E','U','M','L']:
 #Arguments:
 	#start_key - a tuple (date_string, hour, weekday) which describes the start time of the event
 	#end_key - a tuple (date_string, hour, weekday) which describes the end time of the event
-	#global_pace_timeseries - See likelihood_test_parallel.readGlobalPace()
+	#global_pace_timeseries - See likelihood_test_parallel.GlobalPace()
 	#expected_pace_timeseries - See getExpectedPace()
 	#zscore_Timeseries - See readZScoresTimeseries()
 #Returns: A list [start_date, end_date, duration, max_pace_dev, min_pace_dev, worst_trip] describing properties of the event. Breakdonwn:
