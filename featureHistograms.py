@@ -10,9 +10,9 @@ from grid import *
 from regions import *
 from multiprocessing import Pool
 
-os
 
-NUM_PROCESSORS = 8
+
+NUM_PROCESSORS = 16
 
 class Histogram:
 	def __init__(self, name, granularity, lower_bound=float('-inf'), upper_bound=float('inf')):

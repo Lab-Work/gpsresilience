@@ -10,7 +10,6 @@ import numpy
 from numpy import matrix, transpose, diag
 import os, csv
 from collections import defaultdict
-import pickle
 from multiprocessing import Pool
 from gaussian_kernel import *
 import traceback
@@ -27,7 +26,7 @@ OUT_ZSCORE_FILE = "results/std_pace_vector.csv"		#Where to ouput zscores file
 
 #Use Kernel Density Estimate, in addition to Gaussian Distributions?
 #Note : This is much slower
-COMPUTE_KERNEL = False
+COMPUTE_KERNEL = True
 
 
 
@@ -319,18 +318,11 @@ def scale_kern_timeseries(kern_timeseries):
 		val_list[weekday, hour].append(p)
 		if(p < 0):
 			max_val[weekday, hour] = max(max_val[weekday, hour], p)
-
-
-	medians = {}
-	for (weekday, hour) in sorted(max_val):
-		val_list[weekday, hour].sort()
-		median = getQuantile(val_list[weekday, hour], .5)
-		medians[weekday, hour] = median
 	
-	pickle.dump(val_list, open("misc_code/val_list.pickle", "w"))
+	#pickle.dump(val_list, open("misc_code/val_list.pickle", "w"))
 		
 	for (date, hour, weekday) in kern_timeseries:
-		kern_timeseries[date, hour, weekday] -= medians[weekday, hour]
+		kern_timeseries[date, hour, weekday] -= max_val[weekday, hour]
 	
 	
 
