@@ -257,13 +257,11 @@ class GridSystem:
 	def record(self, trip):
 		
 		#If the trip contains an error, call recordError() instead
-		if(trip==None):
-			self.recordError(trip)
+		if(trip==None or trip.has_other_error):
+			if(self.globalEntry != None):
+				self.recordError(trip)
 			return
 
-		if(trip.has_other_error):
-			self.recordError(trip)
-			return
 			
 		
 		if(self.currentTime==None):
