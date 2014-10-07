@@ -8,6 +8,9 @@ Created on Sat May  3 12:33:42 2014
 """
 from datetime import datetime
 import math
+import re
+import psycopg2
+from numpy.linalg import norm
 
 program_start = datetime.now()
 #A convenient print statement for long runs - also includes a timestamp at the beginning of the message
@@ -34,16 +37,13 @@ def logPerc(num, outof, digits):
 
 
 #Computes euclidean distance between two vectors
-#Arguments:
-	#v1, v2 - a list of numbers or Numpy vector
-#Returns:
-	#The euclidean distance between these numbers as a float
+#Arguments
+	#v1, v2 - Numpy matrices
 def euclideanDist(v1, v2):
-	s = 0.0
-	for i in range(len(v1)):
-		s += (v1[i] - v2[i]) **2
-	return math.sqrt(s)
+	return norm(v1 - v2)
 	
+
+
 
 EARTH_RADIUS = 3963.1676 #In miles
 #computes distance between two lat-lon points, assuming spherical earth
@@ -221,4 +221,31 @@ def arbitraryElement(my_collection):
 	for e in my_collection:
 		break
 	return e
+
+
+# An iterator which wraps a round a database cursor
+# http://code.activestate.com/recipes/137270-use-generators-for-fetching-large-db-record-sets/
+def resultIter(cursor, arraysize=10000):
+    while True:
+        results = cursor.fetchmany(arraysize)
+        if not results:
+            break
+        for result in results:
+            yield result
+
+#Parses a point Well-Known-Text like POINT(-122.403099060059 37.7927589416504)
+#into a tuple (lat, lon) - note that the order of coordinates is reversed
+wktSplitter = re.compile('\(| |\)')
+def parsePointWKT(wktString):
+	toks = wktSplitter.split(wktString)
+	return (float(toks[2]), float(toks[1]))
+
+
+def connectToDB(confFilename):
+	with open(confFilename, "r") as f:
+		connString = f.read()
+		conn = psycopg2.connect(connString)
+		return conn
+		
+	
 	

@@ -19,7 +19,14 @@ class InvalidVectorException(Exception):
 	pass
 
 class InvalidCovarianceException(Exception):
-	pass
+	def __init__(self, sigma, reason):
+		self.sigma = sigma
+		self.reason = reason
+	def __str__(self):
+		#vals, vects = eig(self.sigma)
+		#return str(self.sigma) + "\n" + self.reason + "\n Eigenvals : " + str(self.vals)
+		return str(self.sigma) + "\n" + self.reason
+		
 
 #Represents a multivariate Gaussian distribution.  Likelihood can be evaluated in several ways
 class MVGaussian():
@@ -38,17 +45,17 @@ class MVGaussian():
 		except:
 			self.inv_sig = None
 			#print("Non-invertible matrix")
-			raise InvalidCovarianceException()
+			raise InvalidCovarianceException(sig, "Non-invertible matrix")
 		self.determ = det(sig)
 		if(self.determ < 0):
 			#print ("Negative determinant")
-			raise InvalidCovarianceException()
+			raise InvalidCovarianceException(sig, "Negative determinant")
 		
 		vals, vects = eig(self.sig)
 		for v in vals:
 			if(v < 0):
 				#print ("Not positive definite")
-				raise InvalidCovarianceException()
+				raise InvalidCovarianceException(sig, "Negative eigenvalue")
 				
 	#Generates a copy of this distribution.  Faster than calling the custructor again
 	#because it doesn't need to invert the covariance matrix, compute the determinate,

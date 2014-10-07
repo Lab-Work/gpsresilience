@@ -123,7 +123,7 @@ addPacePlot = function(s){
 	#t - the original full table
 	#title - the main title for the plot
 	#type - either "full" corresponding to full gaussian likelihood, or "kern" corresponding to kernel density estimate
-addProbPlot = function(s, t, title, type="full"){
+addProbPlot = function(s, t, title, type="lof"){
 
 
 	#Depending on the type of probability, extract the right column
@@ -134,6 +134,10 @@ addProbPlot = function(s, t, title, type="full"){
 	else if(type=="kern"){
 		s_lnl = s$kern_lnl
 		t_lnl = t$kern_lnl	
+	}
+	else if(type=="lof"){
+		s_lnl = s$lof20
+		t_lnl = t$lof20
 	}
 	
 	#Create the plot of the probability
@@ -161,6 +165,12 @@ addProbPlot = function(s, t, title, type="full"){
 	legend("bottomright", legend=c("R(t)", "Threshold"), col=c("black", "red"),
 		  lwd=c(2,2), bg="white")
 }
+
+
+
+
+
+
 
 
 
@@ -196,6 +206,50 @@ makeplot = function(startDate, endDate, inFile, outFile, title){
 
   dev.off()
 }
+
+
+
+makeLofPlot = function(startDate, endDate, inFile, outFile, title){
+	#Read table from file and select the desired subset
+	t = read.csv(inFile)
+	t$date = as.character(t$date)
+	s = t[t$date>=startDate & t$date<=endDate,]
+
+
+	#Create PDF  
+	print(paste("Creating", outFile))
+	pdf(outFile, 12, 8)
+	par(mfrow=c(2,1), mar=c(3,5,2,1))
+
+	#Create the plot of the probability
+	plot(s$lof1, col="black", type="l", main=title, ylim = quantile(s$lof1, c(.002,1)), xaxt="n", xlab="", ylab="Local Outlier Factor", lwd=2)
+	lines(s$lof3, col="darkblue", lwd=2)
+	lines(s$lof5, col="blue", lwd=2)
+	lines(s$lof10, col="darkgreen", lwd=2)
+	lines(s$lof20, col="green", lwd=2)
+	lines(s$lof30, col="orange", lwd=2)
+	lines(s$lof50, col="red", lwd=2)
+	
+	legend("topright",
+		legend=c("k=1", "k=3", "k=5", "k=10", "k=20", "k=30", "k=50"),
+		col=c("black", "darkblue", "blue", "darkgreen", "green", "orange", "red"), lwd=2)
+	
+	#Add dates as x-axis labels
+	ids = (0:20) * 24 + 1
+	short_dates = shortenDates(s$date)
+	axis(1, at=ids, labels=short_dates[ids], cex.axis=.75)
+	  
+	  
+	#Draw thin lines to divide days, and thick lines to divide weeks  
+	abline(v=ids)
+	ids2 = (0:3)*24*7 + 1
+	abline(v=ids2, lwd=3)
+
+	addPacePlot(s)
+
+
+}
+
 
 #Makes a plot that compares the gaussian density with the kernel density
 #Arguments:
@@ -280,13 +334,16 @@ makeThrashingPlot = function(startDate, endDate, inFile, events1, events2, outFi
 
 
 
+makeLofPlot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/event_Sandy_lofs.pdf", "Event Detection")
+
+
 #Make probability plots for several interesting events
-makeplot("2012-10-21", "2012-11-11", "results/lnl_over_time_leave1.csv", "results/event_Sandy.pdf", "Event Detection")
-makeplot("2010-12-20", "2011-01-09", "results/lnl_over_time_leave1.csv", "results/event_Blizzard.pdf", "Event Detection")
-makeplot("2011-08-21", "2011-09-11", "results/lnl_over_time_leave1.csv", "results/event_Irene.pdf", "Event Detection")
-makeplot("2013-02-03", "2013-02-24", "results/lnl_over_time_leave1.csv", "results/event_Blizzard2.pdf", "Event Detection")
-makeplot("2010-02-21", "2010-03-14", "results/lnl_over_time_leave1.csv", "results/event_Blizzard3.pdf", "Event Detection")
-makeplot("2013-10-06", "2013-10-27", "results/lnl_over_time_leave1.csv", "results/event_October.pdf", "Event Detection")
+makeplot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/event_Sandy_lof.pdf", "Event Detection")
+makeplot("2010-12-20", "2011-01-09", "results/outlier_scores.csv", "results/event_Blizzard_lof.pdf", "Event Detection")
+makeplot("2011-08-21", "2011-09-11", "results/outlier_scores.csv", "results/event_Irene_lof.pdf", "Event Detection")
+makeplot("2013-02-03", "2013-02-24", "results/outlier_scores.csv", "results/event_Blizzard2_lof.pdf", "Event Detection")
+makeplot("2010-02-21", "2010-03-14", "results/outlier_scores.csv", "results/event_Blizzard3_lof.pdf", "Event Detection")
+makeplot("2013-10-06", "2013-10-27", "results/outlier_scores.csv", "results/event_October_lof.pdf", "Event Detection")
 
 
 #Make a plot to demonstrate thrashing

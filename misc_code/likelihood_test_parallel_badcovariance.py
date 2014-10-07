@@ -7,7 +7,7 @@ Created on Wed May 21 17:37:25 2014
 @author: Brian Donovan (briandonovan100@gmail.com)
 """
 import numpy
-from numpy import matrix, transpose, diag
+from numpy import matrix, array, transpose, diag, not_equal, multiply
 import os, csv
 from collections import defaultdict
 from multiprocessing import Pool
@@ -19,14 +19,14 @@ from eventDetection import *
 from tools import *
 
 
-NUM_PROCESSORS = 8
+NUM_PROCESSORS = 1
 IN_DIR = "4year_features"	#Location of features folder (output of extractRegionFeaturesParallel)
 OUT_PROB_FILE = "results/lnl_over_time_leave1.csv"	#Where to output probability file
 OUT_ZSCORE_FILE = "results/std_pace_vector.csv"		#Where to ouput zscores file
 
 #Use Kernel Density Estimate, in addition to Gaussian Distributions?
 #Note : This is much slower
-COMPUTE_KERNEL = True
+COMPUTE_KERNEL = False
 
 
 
@@ -40,9 +40,7 @@ COMPUTE_KERNEL = True
 	#end_id - the end of the slice to be computed by this thread
 def generateTimeSlice((pace_timeseries, pace_grouped, groupedStats, start_id, end_id)):
 	try:
-		(s_x, s_xxt, count) = groupedStats
 			
-		
 		
 		if(COMPUTE_KERNEL):
 			kernels = {}
@@ -70,7 +68,7 @@ def generateTimeSlice((pace_timeseries, pace_grouped, groupedStats, start_id, en
 						
 			
 			#Use the grouped stats and the current vector (obs) to compute the leave-1-out mean and covariance
-			(mu, sig_full) = computeLeave1Stats(s_x, s_xxt, count, obs, weekday, hour)
+			(mu, sig_full) = computeLeave1Stats(groupedStats, obs, weekday, hour)
 	
 			
 			
@@ -112,7 +110,8 @@ def generateTimeSlice((pace_timeseries, pace_grouped, groupedStats, start_id, en
 	except Exception as e:
 		traceback.print_exc()
 	   	print()
-		raise e
+		#raise e
+		import pdb; pdb.set_trace();
 	return (full_timeseries, ind_timeseries, kernel_timeseries, zscore_timeseries)
 
 
@@ -198,9 +197,8 @@ def readPaceData(dirName):
 		#Save vector in the timeseries
 		pace_timeseries[(date, hour, weekday)] = v
 		
-		#If there is no missing data, save the vector into the group
-		if(allNonzero(v)):
-			pace_grouped[(weekday, hour)].append(v)
+		#Also put the vector into the correct group
+		pace_grouped[(weekday, hour)].append(v)
 
 	
 	#return time series and grouped data
@@ -250,12 +248,14 @@ def readGlobalPace(dirName):
 		#s_xxt - a dictionary which maps (weekday, hour) --> The sum of outer products at that time  (a matrix)
 		#count - a dictionary which maps (weekday, hour) --> The count of vectors at that time (a number)
 def computeGroupedStats(pace_grouped):
-	count = {}	#count of all vectors (0th moneht)
 	s_x = {} 	#sum of all vectors (1st moment)
 	s_xxt = {}	#sum of all outer products: x * transpose(x) (2nd moment)
 	
+	count_x = {} #element-wise count, corresponds to s_x
+	count_xxt = {} #element-wise count, corresponds to s_xxt
+	
 	x = pace_grouped[arbitraryElement(pace_grouped)][0]
-
+ 
 	
 	#Iterate through all groups.  Note that key = (weekday, hour)
 	for key in pace_grouped:
@@ -263,46 +263,77 @@ def computeGroupedStats(pace_grouped):
 		s_x[key] = matrix(zeros((len(x),1)))
 		s_xxt[key] = matrix(zeros((len(x),len(x))))
 		
-		#Get the group of mean pace vectors and store the count
-		group = pace_grouped[key]
-		count[key] = len(group)
+		#Initialize counts to zero
+		count_x[key] = matrix(zeros((len(x), 1)))
+		count_xxt[key] = matrix(zeros((len(x),len(x))))
 		
 		#Iterate through mean pace vectors, updating the appropriate counts
+		group = pace_grouped[key]
 		for meanPaceVector in group:
-			s_x[key] += meanPaceVector
-			s_xxt[key] += meanPaceVector * transpose(meanPaceVector)
+			s_x[key] += meanPaceVector #Update sum of vectors
+			s_xxt[key] += meanPaceVector * transpose(meanPaceVector) #Update sum of outer products
+			#Note that x=0 indicates missing data - these sums will not increase			
+			
+			onesVector = not_equal(meanPaceVector, 0).astype(int) #Contains 0s where x==0, 1s everywhere else
+			count_x[key] += onesVector
+			onesMatrix = onesVector * transpose(onesVector) #Contains all 1s, except for rows or columns where x==0
+			count_xxt[key] += onesMatrix
+		
+	print count_x["Saturday", 21]
+	print count_xxt["Saturday", 21]
 
-	#Return the thre statistics
-	return (s_x, s_xxt, count)
+	#Return the four statistics
+	groupedStats = (s_x, s_xxt, count_x, count_xxt)
+	return groupedStats
+
+
 
 
 
 #Compute the mean and variance of mean pace vectors that occur at the same point in time periodic pattern
 #EXCEPT FOR one particular value, X.  Note that this can be done in constant time if computeGroupedStats() is already run
 #Arguments:
-	#s_x - output of computeGroupedStats()
-	#s_xxt - output of computeGroupedStats()
-	#count - output of computeGroupedStats()
+	#groupedStats - see computeGroupedStats()
 	#x - a particular mean pace vector
 	#weekday - the weekday on which X was observed
 	#hour - the hour on which X was observed
-def computeLeave1Stats(s_x, s_xxt, count, x, weekday, hour):
-	if(allNonzero(x)):
-		#update the grouped statistics to not include X (subtract it from the sums)
-		new_s_x = s_x[weekday, hour] - x
-		new_s_xxt = s_xxt[weekday, hour] - x * transpose(x)
-		new_count = count[weekday, hour] - 1
-	else:
-		#If x has a zero, then it was not included in the sums - leave them as is
-		new_s_x = s_x[weekday, hour]
-		new_s_xxt = s_xxt[weekday, hour]
-		new_count = count[weekday, hour]
+def computeLeave1Stats(groupedStats, x, weekday, hour):
+	(s_x, s_xxt, count_x, count_xxt) = groupedStats
+
+	#The "new sums" are the group sums minus this one observation
+	#i.e. the sum of everything except x
+	#new_s_x = s_x[weekday, hour] - x
+	#new_s_xxt = s_xxt[weekday, hour] - x * transpose(x)
+
+	#The "new counts" are the group counts minus one where x is observable
+	#i.e. the count of everything except x
+	#onesVector = not_equal(x, 0).astype(int) #Contains 0s where x==0, 1s everywhere else
+	#onesMatrix = onesVector * transpose(onesVector) #Contains all 1s, except for rows or columns where x==0
+	#new_count_x = count_x[weekday, hour] - onesVector
+	#new_count_xxt = count_xxt[weekday, hour] - onesMatrix
+	
+	new_s_x = s_x[weekday, hour]
+	new_s_xxt = s_xxt[weekday, hour]
+	new_count_x = count_x[weekday, hour]
+	new_count_xxt = count_xxt[weekday, hour]
+
+	
+	
 	
 	#compute the mean from these new sums
-	mu = new_s_x / new_count
+	mu = new_s_x / new_count_x
+
+
+	#Compute the covariance matrix from these new sums	
+	#var(x) = E[x**2] - E[x]**2
+	unbiased_correction = new_count_xxt.astype(float) / (new_count_xxt - 1) # Multiply by n/(n-1) for unbiased covariance correction
+	biased_sigma = ((new_s_xxt / new_count_xxt) - mu * transpose(mu))
+
 	
-	#var(x) = E[x**2] - E[x]**2.  Multiply by n/(n-1) for unbiased covariance correction
-	sigma = (new_s_xxt / new_count - mu * transpose(mu)) * (new_count / (new_count - 1))
+	#sigma = multiply(biased_sigma, unbiased_correction)
+	sigma = biased_sigma	
+	
+	
 	
 	#Return the mean and covariance matrix
 	return (mu, sigma)
