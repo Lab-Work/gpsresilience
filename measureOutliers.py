@@ -5,7 +5,7 @@ Created on Wed Sep 24 12:34:53 2014
 @author: brian
 """
 import numpy
-from numpy import matrix, transpose, diag
+from numpy import matrix, transpose
 import os, csv
 from collections import defaultdict
 from multiprocessing import Pool
@@ -27,6 +27,7 @@ NUM_PROCESSORS = 8
 	#count_timeseries - a dictionary which maps (date, hour, weekday) to the corresponding count vector (number of occurrences of each trip type)
 	#pace_grouped - a dictionary which maps (weekday, hour) to the list of corresponding pace vectors
 	#		for example, ("Wednesday", 5) maps to the list of all pace vectors that occured on a Wednesday at 5am.
+	#trip_names - the names of the trips, which correspond to the dimensions in the vectors (e.g. "E-E")
 def readPaceData(dirName):
 	logMsg("Reading files from " + dirName + " ...")
 	#Create filenames
@@ -40,7 +41,8 @@ def readPaceData(dirName):
 	
 	#Read the pace file
 	r = csv.reader(open(paceFileName, "r"))
-	colIds = getHeaderIds(r.next())
+	header = r.next()
+	colIds = getHeaderIds(header)
 	
 	#Read the file line by line
 	for line in r:
@@ -58,14 +60,14 @@ def readPaceData(dirName):
 		#Save vector in the timeseries
 		pace_timeseries[(date, hour, weekday)] = v
 		
-		#If there is no missing data, save the vector into the group
-		if(allNonzero(v)):
-			pace_grouped[(weekday, hour)].append(v)
-			dates_grouped[(weekday, hour)].append(date)
+		#save the vector into the group
+		pace_grouped[(weekday, hour)].append(v)
+		dates_grouped[(weekday, hour)].append(date)
 
+	trip_names = header[3:]
 	
 	#return time series and grouped data
-	return (pace_timeseries, pace_grouped, dates_grouped)
+	return (pace_timeseries, pace_grouped, dates_grouped, trip_names)
 
 
 
@@ -111,7 +113,7 @@ def processGroup((paceGroup, dateGroup, hour, weekday)):
 	logMsg("Processing " + weekday + " " + str(hour))
 	
 	#Compute mahalanobis outlier scores
-	mahals = computeMahalanobisDistances(paceGroup)
+	(mahals, group_zscores) = computeMahalanobisDistances(paceGroup)
 	
 	#compute local outlier factors with various k parameters
 	lofs1 = getLocalOutlierFactors(paceGroup, 1)
@@ -125,12 +127,15 @@ def processGroup((paceGroup, dateGroup, hour, weekday)):
 	#A dictionary which maps (date, hour, weekday), to an entry
 	#An entry is a tuple that contains various types of outlier scores
 	scores = {}
+	#Here, each entry is the zscored vector
+	zscores = {}
 	for i in range(len(paceGroup)):
 		entry = (mahals[i], lofs1[i], lofs3[i], lofs5[i], lofs10[i], lofs20[i], lofs30[i], lofs50[i])
 		scores[dateGroup[i], hour, weekday] = entry
-	
+		
+		zscores[dateGroup[i], hour, weekday] = group_zscores[i]
 	#Return the scores
-	return scores
+	return (scores, zscores)
 
 #An iterator which supplies inputs to processGroup()
 #Each input contains a set of mean pace vectors, and some extra time info
@@ -149,15 +154,19 @@ def groupIterator(pace_grouped, dates_grouped):
 
 #Merges many group scores - see the output of processGroup() - into one
 #params:
-	#outputList - a list of dictionaries, each of which map weekday/hour pairs to entries
+	#outputList - a list of (score, zscore) tuples
 	#Each element of the list is an output of processGroup()
 #return:
-	#a single dictionary which maps weekday/hour pairs to entries
+	#scores - a dictionary that maps date/hour pairs to entries
+	#zscores - a dictionary that maps date/hour pairs to zscores
 def reduceOutputs(outputList):
 	scores = {}
-	for score in outputList:
+	zscores = {}
+	for (score, zscore) in outputList:
 		scores.update(score)
-	return scores
+		zscores.update(zscore)
+		
+	return (scores, zscores)
 	
 
 #Generates time-series log-likelihood values
@@ -172,7 +181,7 @@ def generateTimeSeriesLeave1(inDir):
 	
 	#Read the time-series data from the file
 	logMsg("Reading files...")
-	(pace_timeseries, pace_grouped, dates_grouped) = readPaceData(inDir)
+	(pace_timeseries, pace_grouped, dates_grouped, trip_names) = readPaceData(inDir)
 
 	#Also get global pace information
 	global_pace_timeseries = readGlobalPace(inDir)
@@ -187,11 +196,11 @@ def generateTimeSeriesLeave1(inDir):
 
 	logMsg("Merging output")
 	#Merge outputs from all of the threads
-	outlierScores = reduceOutputs(outputList)
+	(outlierScores, zscores) = reduceOutputs(outputList)
 
 	
 	logMsg("Writing file")
-	#Output to file
+	#Output outlier scores to file
 	scoreWriter = csv.writer(open("results/outlier_scores.csv", "w"))
 	scoreWriter.writerow(['date','hour','weekday', 'mahal', 'lof1', 'lof3', 'lof5', 'lof10', 'lof20', 'lof30', 'lof50' ,'global_pace', 'expected_pace', 'sd_pace'])
 	
@@ -205,6 +214,18 @@ def generateTimeSeriesLeave1(inDir):
 		
 		scoreWriter.writerow([date, hour, weekday] + list(scores) + [gl_pace, exp_pace, sd_pace])
 
+
+	zscoreWriter= csv.writer(open("results/zscore.csv", "w"))
+	zscoreWriter.writerow(['Date','Hour','Weekday'] + trip_names)
+	#Output zscores to file
+	for (date, hour, weekday) in sorted(zscores):
+		std_vect = zscores[date, hour, weekday]
+		zscoreWriter.writerow([date, hour, weekday] + ravel(std_vect).tolist())
+		
+
+
+
+	
 	logMsg("Done.")
 
 if(__name__=="__main__"):

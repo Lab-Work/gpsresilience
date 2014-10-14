@@ -13,9 +13,11 @@ max_pace = 600
 
 #Read the mean pace vectors
 t = read.csv("4year_features/pace_features.csv")
+t$Date=as.character(t$Date)
 
 #Read the standardized pace vectors
-zt = read.csv("results/std_pace_vector.csv")
+zt = read.csv("results/zscore.csv")
+zt$Date=as.character(zt$Date)
 
 #Create the color gradient ramp
 jet.colors =colorRamp(c("#00007F", "blue", "#007FFF", "cyan",
@@ -53,19 +55,29 @@ shortenDates = function(dates){
 #Adds a legend to the picture in a separate plot
 #Arguments:
 	#type - either "absolute" or "standard".  INdicates mean pace vectors or standardized pace vectors respectively
-addLegend = function(type){
+addLegend = function(type, crush=F){
 
 	#Set up the margins
-	par(mar=c(2,0,.5,0))
+	par(mar=c(1.8,0,1,0))
+	
+
+	if(crush){
+		titleSize=1.5
+		axisSize=1.5
+	}
+	else{
+		titleSize=.8
+		axisSize=1
+	}
 	
 	#Set up the plots - the type determines the title and the range of interesting values (lo, hi)
 	if(type=="absolute"){
-		plot(0,0, type="n", xlim=c(1,200), ylim=c(-1,1), xaxt="n", yaxt="n", , bty="n", cex.main=.8, main="Pace (min / mi)")
+		plot(0,0, type="n", xlim=c(1,200), ylim=c(-1,1), xaxt="n", yaxt="n", , bty="n", cex.main=titleSize, main="Pace (min / mi)")
 		lo = 0
 		hi = 600
 	}
 	else if(type=="standardized"){
-		plot(0,0, type="n", xlim=c(1,200), ylim=c(-1,1), xaxt="n", yaxt="n", , bty="n", cex.main=.8, main="Standardized Pace (Z-Score)")
+		plot(0,0, type="n", xlim=c(1,200), ylim=c(-1,1), xaxt="n", yaxt="n", , bty="n", cex.main=titleSize, main="Standardized Pace (Z-Score)")
 		lo = min_z
 		hi = max_z
 	}
@@ -87,10 +99,10 @@ addLegend = function(type){
 	a = (0:10)*20 + 1
 	#Add the axis every 20 values
 	if(type=="absolute"){
-	  axis(1, at=a, labels=round(vals[a]/60, 2))
+	  axis(1, at=a, labels=round(vals[a]/60, 2), cex.axis=axisSize)
 	}
 	else if(type=="standardized"){
-	   axis(1, at=a, labels=round(vals[a], 2))
+	   axis(1, at=a, labels=round(vals[a], 2), cex.axis=axisSize)
 	}
 	
 }
@@ -164,18 +176,24 @@ makeMainPlot = function(startDate, endDate, mainTitle, type, crush=F){
 	if(crush){
 		par(mar=c(1,3,1,.4))	#Decrease margins
 		extra_height=0		#Don't leave room for tags
-		pt_size = .7		#Control size of plotted points
+		pt_size = 1		#Control size of plotted points
 		region_label_size = 2	#Control size of y axis label
+		mainTitleSize=2
 		mainTitle = ""		#No main title
+		s = t[t$Date>=startDate & t$Date <= endDate,]
 	}
 	else{
 		par(mar=c(3,4,2,.4))	#Large margins
 		extra_height=5		#Leave 5 rows empty for tags
-		pt_size = .7		#Control size of y axis label
+		pt_size = 1		#Control size of y axis label
+		mainTitleSize=1
+		s = zt[zt$Date>=startDate & zt$Date <= endDate,]
+		
 	}
 	
 	#Create the plot
-	plot(0,0, type="n", xlim=c(7,(24*7 - 7)), ylim=c(1,16+extra_height), xaxt="n", xlab="", yaxt="n", ylab="", main=mainTitle)
+	plot(0,0, type="n", xlim=c(7,(24*7 - 7)), ylim=c(1,16+extra_height),
+		xaxt="n", xlab="", yaxt="n", ylab="", main=mainTitle, cex.main=mainTitleSize)
 
 	
         #Iterate through columns (dimensions of mean pace vector)
@@ -223,7 +241,7 @@ makeMainPlot = function(startDate, endDate, mainTitle, type, crush=F){
 	short_dates = shortenDates(s$Date)
 	
 	if(crush){
-		axis(1, at=a, labels=short_dates[a], cex.axis=.7, pos=2.5)
+		axis(1, at=a, labels=short_dates[a], cex.axis=1, pos=2.5)
 	}
 	else{
 		axis(1, at=a, labels=short_dates[a], cex.axis=1, pos=0)
@@ -283,10 +301,10 @@ plot3Weeks = function(weekDates, type){
 	}
 
 	#Add the legend in the last plot  
-	addLegend(type)
+	addLegend(type, crush=T)
 	
 	#Add an overall title
-	title(main="Mean Pace Vector - Three Typical Weeks", outer=T)
+	title(main="Mean Pace Vector - Three Typical Weeks", outer=T, cex.main=2)
 }
 
 ###########################################################################################
@@ -295,8 +313,9 @@ plot3Weeks = function(weekDates, type){
 
 
 #Create standardized pace vector plot for week of Hurricane Sandy
-plotTimeSpan("2012-10-28", "2012-11-04", "Standardized Pace (sec/mi) Over Time - Week of Hurricane Sandy", "standardized")
-
+svg("results/color_standardized_pace_over_time.svg", 10, 5)
+plotTimeSpan("2012-10-28", "2012-11-04", "Standardized Pace (min/mi) Over Time - Week of Hurricane Sandy", "standardized")
+dev.off()
 
 
 #Optional - make plot for whole year (relatively slow)
@@ -321,8 +340,8 @@ if(plotWholeYear){
 
 
 #Make plot of mean pace vector for "3 typical weeks"
-pdf("results/color_pace_3weeks.pdf", 5, 5)
-#svg("presentation_figs/color_pace_3weeks.svg", 10, 10)
+#pdf("results/color_pace_3weeks.pdf", 5, 5)
+svg("results/color_pace_3weeks.svg", 10, 5)
 weeks=c('2010-04-04', '2010-04-11', '2010-04-18', '2010-04-25')
 par(oma=c(1,1,2,1))
 

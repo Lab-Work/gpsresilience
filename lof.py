@@ -18,6 +18,9 @@ def getPairwiseDist(vects):
 	return dist
 
 def getLocalOutlierFactors(vects, k):
+	
+	#TMP HACK
+	return [0]*len(vects)
 	pairDist = getPairwiseDist(vects)
 	
 

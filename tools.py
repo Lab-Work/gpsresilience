@@ -9,7 +9,7 @@ Created on Sat May  3 12:33:42 2014
 from datetime import datetime
 import math
 import re
-import psycopg2
+#import psycopg2
 from numpy.linalg import norm
 
 program_start = datetime.now()

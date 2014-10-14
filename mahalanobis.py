@@ -5,9 +5,8 @@ Created on Tue Sep 30 19:28:30 2014
 @author: Brian Donovan (briandonovan100@gmail.com)
 """
 from tools import *
-from numpy import transpose, matrix
+from numpy import transpose, matrix, nonzero, ravel, diag, sqrt, where
 from numpy.linalg import inv, eig
-from math import sqrt
 
 
 
@@ -54,6 +53,33 @@ class GroupedStats:
 		
 		return (mean, cov)
 	
+	#If an observation has missing values, we need to take a subset of the dimensions
+	#AKA the mean vector now has less than K dimensions where K <= N, and the cov matrix is K x K
+	#This method performs the dimension selection
+	#Arguments:
+		#obs - the observation which may have some missing values (0 is assumed to be missing)
+		#returns a tuple containing the selection on these three inputs, as well as the inverse and determinant of the new matrix
+	#Returns:
+		#A tuple (mean_subset, cov_subset, obs_subset).  Breakdown:
+			#mean_subset - a Kx1 vector
+			#cov_subset -a KxK matrix
+			#obs_subset - a Kx1 vector
+	def getIncompleteMeanAndCov(self, obs):
+		#First get the full mean and covariance
+		(mean, cov) = self.getMeanAndCov()
+		
+		#Record the indexes with nonzero value
+		valid_ids = ravel(nonzero(obs)[0])		
+		
+		#Perform the selection using Numpy slicing
+		mean_subset = mean[valid_ids,:]
+		cov_subset = cov[valid_ids,:][:,valid_ids]
+		obs_subset = obs[valid_ids]
+		
+		
+		return (mean_subset, cov_subset, obs_subset)		
+	
+	
 	#Generates a leave-1-out estimate of the group stats.
 	#In other words, the variables (count, s_x, s_xxt) will calculated as if a given vector is discluded
 	#This is faster than re-generating the stats with a set of vectors that does not include "vect"
@@ -80,7 +106,10 @@ class GroupedStats:
 		#vector - A vector to measure
 	#returns a positive number representing the mahalanobis distance
 	def mahalanobisDistance(self, vect):
-		(mean, cov) = self.getMeanAndCov()
+		if(allNonzero(vect)):
+			(mean, cov) = self.getMeanAndCov()
+		else:
+			(mean, cov, vect) = self.getIncompleteMeanAndCov(vect)
 		try:
 			mahal = transpose(vect - mean) * inv(cov) * (vect - mean)
 			return sqrt(mahal[0,0])
@@ -89,19 +118,52 @@ class GroupedStats:
 			(vects, vals) = eig(cov)
 			print vects
 			print vals
+	
+	#Computes the element-wise standardized vector (zscores)
+	#In other words, each dimension of the vector is compared to the corresponding
+	#mean and std. dev.
+	#params:
+		#vect - a Numpy column vector
+	#returns:
+		#a new Numppy column vector, but with each dimension standardized
+	def standardizeVector(self, vect):
+		(mean, cov) = self.getMeanAndCov()
+		#Extract the diagonal components of the covariance matrix
+		#And put them into a column vector
+		independent_variances=(transpose(matrix(diag(cov))))
+		
+		
+		
+
+		
+		#Note that the division is done element-wise
+		std_vector = (vect-mean)/sqrt(independent_variances)
+		
+		#Deal with missing data properly
+		#find the dimensions in the original vector that have missing data
+		invalid_ids = where(vect==0)[0]
+		#set these values to 0 in the standardized vector (this is how missing data is encoded)
+		std_vector[invalid_ids,]=0
+		
+		return std_vector
+	
+	
+
 		
 		
 #Computes the mahalanobis distance of each vector from the mean
-#Using a leave-one-out estimate
+#Using a leave-one-out estimate.  Also computes the element-wise standardized vector (z-scores)
 #params:
 	#vectors - a list of Numpy vectors
 #returns:
-	# a list of Mahalanobis distances,  correspondign to the input vectors
+	# distances - a list of Mahalanobis distances,  correspondign to the input vectors
+	# zscores - a list of standardized vectors, corresponding to the input vectors
 def computeMahalanobisDistances(vectors):
 	#compute the groupedStats for the vectors	
 	groupedStats = GroupedStats(vectors)
 	
 	distances = []
+	zscores = []
 	#We want to compute the Mahalanobis distance for each vector
 	for vect in vectors:
 		#Get the leave-one-out stats
@@ -110,6 +172,10 @@ def computeMahalanobisDistances(vectors):
 		#Use these to compute the mahalanobis distance from this vector, and add to list
 		mahalanobisDistance = stats.mahalanobisDistance(vect)
 		distances.append(mahalanobisDistance)
-	
-	#finally, return the computed distances
-	return distances
+		
+		#Compute the element-wise standardized vector
+		z_vector = stats.standardizeVector(vect)
+		zscores.append(z_vector)
+		
+	#finally, return the computed distances and zscores
+	return (distances, zscores)
