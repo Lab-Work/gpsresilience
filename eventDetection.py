@@ -319,8 +319,8 @@ def computeEventProperties(start_key, end_key, global_pace_timeseries, expected_
 	#Compute duration.  Add 1 because start and end times are inclusive
 	duration = int((end_date - start_date + timedelta(hours=1)).total_seconds() / 3600)
 
-	max_pace_dev = 0
-	min_pace_dev = 0
+	max_pace_dev = float('-inf')
+	min_pace_dev = float('inf')
 	
 	
 	

@@ -43,12 +43,13 @@ addEvents = function(s, filename){
 	end_x = difftime(events$end_date, MIN_DATE, units="hours")
 
 
+	#print(cbind(start_x,end_x))
 	#Get the y-limits, using a quantile of the y-values (the probabilities)
-	ylm = quantile(s$full_lnl, c(.002,1))
+	ylm = quantile(s$mahal, c(.002,1))
 	
 	#Draw a rectangle for each of the events
 	for (i in 1:length(start_x)){
-		if(start_x[i] > 0 && end_x[i] < 3*7*24){
+		if(end_x[i] > 0 && start_x[i] < 3*7*24){
 			polygon(x=c(start_x[i], end_x[i], end_x[i], start_x[i]), y=c(ylm[1], ylm[1], ylm[2], ylm[2]), col=rgb(.5,.5,.5,.4))
 		}
 	}
@@ -157,7 +158,7 @@ addOutlierPlot = function(s, t, title, type="mahal"){
 	abline(v=ids2, lwd=3)
 
 	#Add the legend
-	legend("topright", legend=c("R(t)", "Threshold"), col=c("black", "red"),
+	legend("topright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
 		  lwd=c(2,2), bg="white")
 }
 
@@ -312,14 +313,14 @@ makeThrashingPlot = function(startDate, endDate, inFile, events1, events2, outFi
 	#Add the probability plot with unfiltered events
 	addOutlierPlot(s, t, "Original Events")
 	addEvents(s, events1)
-	legend("bottomright", legend=c("R(t)", "Threshold"), col=c("black", "red"),
-		  lwd=c(2,2), bg="white")
+	#legend("bottomright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
+	#	  lwd=c(2,2), bg="white")
 
 	#Add the probability plot with filtered events
 	addOutlierPlot(s, t, "Merge Nearby Events")
 	addEvents(s, events2)
-	legend("bottomright", legend=c("R(t)", "Threshold"), col=c("black", "red"),
-		  lwd=c(2,2), bg="white")
+	#legend("bottomright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
+	#	  lwd=c(2,2), bg="white")
 
 	#Add overall title
 	title("Event Detection - Thrashing", outer=T, cex.main=2)
@@ -342,7 +343,7 @@ makeplot("2013-10-06", "2013-10-27", "results/outlier_scores.csv", "results/even
 
 
 #Make a plot to demonstrate thrashing
-#makeThrashingPlot("2012-10-21", "2012-11-11", "results/lnl_over_time_leave1.csv", "results/events_stage1.csv", "results/events_stage2.csv", "results/thrashing.pdf")	
+makeThrashingPlot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/events_nomerge.csv", "results/events_sorted.csv", "results/thrashing.pdf")	
 
 
 #Make a plot to compare kernel & gaussian densities

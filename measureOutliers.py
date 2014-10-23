@@ -223,9 +223,6 @@ def generateTimeSeriesLeave1(inDir):
 		zscoreWriter.writerow([date, hour, weekday] + ravel(std_vect).tolist())
 		
 
-
-
-	
 	logMsg("Done.")
 
 if(__name__=="__main__"):
