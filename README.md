@@ -3,7 +3,7 @@ Taxi GPS Data as Pervasive City-Scale Resilience Sensors
 
 ##1)Overview
 
-The code in this repository can be used to reproduce the results of paper "Using coarse GPS data to quantify city-scale transportation system resilience to extreme events" by Brian Donovan and Dan Work.  The purpose of this analysis is to extract meaningful information from large-scale taxi data, which can be downloaded [here](publish.illinois.edu/dbwork/open-data/).
+The code in this repository can be used to reproduce the results of paper "Using coarse GPS data to quantify city-scale transportation system resilience to extreme events" by Brian Donovan and Dan Work.  The purpose of this analysis is to extract meaningful information from large-scale taxi data, which can be downloaded [here](http://publish.illinois.edu/dbwork/open-data/).
 
 
 ##2)License
@@ -30,7 +30,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ###**Step 1 - Download the data**
 
-The dataset used in our analysis is made publicly available [here](https://uofi.box.com/s/zmggziub40wx1bq2h9bq).  This dataset contains record of almost 700 million taxi trips in New York City between 2010 and 2013 (inclusive).  Included information:
+The dataset used in our analysis is made publicly available [here](http://publish.illinois.edu/dbwork/open-data/).  This dataset contains record of almost 700 million taxi trips in New York City between 2010 and 2013 (inclusive).  Included information:
 - GPS coordinates for pickup and dropoff
 - Date and time for pickup and dropoff
 - Metered Distance
