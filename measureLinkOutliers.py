@@ -18,14 +18,11 @@ import csv
 
 
 
-# Determines the set of links that consistantly have many trips on them.  Specifically,
-# we want to keep links that have a high number of trips / hour.
+# Computes the average number of trips/hour over each link of the map, then saves
+# these counts in the database.
 # Params:
-    # dates - the dates that we want to analyze for obtaining the consistent link set
-    # num_trips_threshold - only linkt hat have at least this many trips/hour will be kept
-# Returns:
-    # a list of links, which are represented by tuples (origin_node_id, connecting_node_id)
-def get_consistent_link_set(dates, num_trips_threshold):
+    # dates - a list of dates to average over
+def compute_link_counts(dates):
     num_obs = defaultdict(float)
     for date in dates:
         curs = db_travel_times.get_travel_times_cursor(date)
@@ -35,12 +32,25 @@ def get_consistent_link_set(dates, num_trips_threshold):
     for key in num_obs:
         num_obs[key] /= len(dates)
     
-    if(False):
-        print ("Loading map")
-        road_map = Map("nyc_map4/nodes.csv", "nyc_map4/links.csv")
-        drawFigure('tmp.csv', road_map, num_obs)
-        
-    consistent_links = [key for key in num_obs if num_obs[key] > num_trips_threshold]
+    db_travel_times.create_link_counts_table()
+    db_travel_times.save_link_counts(num_obs)
+
+
+
+# Determines the set of links that consistantly have many trips on them.  Specifically,
+# we want to keep links that have a high number of trips / hour.  These average link counts
+# come from the database table link_counts, which is created by compute_link_counts()
+# Params:
+    # dates - the dates that we want to analyze for obtaining the consistent link set
+    # num_trips_threshold - only linkt hat have at least this many trips/hour will be kept
+# Returns:
+    # a list of links, which are represented by tuples (origin_node_id, connecting_node_id)
+def load_consistent_link_set(dates, num_trips_threshold):
+    cur = db_travel_times.get_link_counts_cursor()
+
+    consistent_links = [(begin_node_id, end_node_id) for
+        (begin_node_id, end_node_id, avg_num_trips) in cur
+        if avg_num_trips >= num_trips_threshold]
     return consistent_links
     
 # Loads link-level travel times into vectors.  Each vector represents a point in time, and
@@ -59,7 +69,9 @@ def load_pace_data(num_trips_threshold=50):
     dates = db_travel_times.get_available_dates()
     
     print ("Computing consistent link set")
-    consistent_link_set = get_consistent_link_set(dates, num_trips_threshold)
+    compute_link_counts(dates)
+    
+    consistent_link_set = load_consistent_link_set(dates, num_trips_threshold)
     
     # Map (begin_node,connecting_node) --> ID in the pace vector
     link_id_map = defaultdict(lambda : -1) # -1 indicates an invalid ID number    
