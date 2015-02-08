@@ -32,7 +32,9 @@ def compute_link_counts(dates):
     for key in num_obs:
         num_obs[key] /= len(dates)
     
+    print("Creating")
     db_travel_times.create_link_counts_table()
+    print("Saving")
     db_travel_times.save_link_counts(num_obs)
 
 
@@ -71,8 +73,11 @@ def load_pace_data(num_trips_threshold=50):
     print ("Computing consistent link set")
     compute_link_counts(dates)
     
+    print("Loading consistent link set")
     consistent_link_set = load_consistent_link_set(dates, num_trips_threshold)
     
+    
+    print("Running analysis")
     # Map (begin_node,connecting_node) --> ID in the pace vector
     link_id_map = defaultdict(lambda : -1) # -1 indicates an invalid ID number    
     for i in xrange(len(consistent_link_set)):
