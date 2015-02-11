@@ -10,19 +10,21 @@ Functions to load link-by-link traffic conditions as vectors, for use in measure
 from db_functions import db_main, db_travel_times
 from numpy import matrix, zeros
 from routing.Map import Map
+from tools import DefaultPool, splitList, logMsg
+
 
 from collections import defaultdict
-from tools import DefaultPool, splitList, logMsg
+from functools import partial
 import csv
 
 
 
 
 
-# Computes the average number of trips/hour over each link of the map, and returns
+# Computes the total number of trips/hour over each link of the map, and returns
 # them in a dictionary
 # Params:
-    # dates - a list of dates to average over
+    # dates - a list of dates to process
 # Returns:
     # num_obs - a dictionary that maps (begin_node_id, end_node_id) --> total number of trips
 def compute_link_counts(dates):
@@ -40,7 +42,11 @@ def compute_link_counts(dates):
     
     
 
-
+# Computes the average number of trips/hour over each link of the map, and saves them
+# into the database.  Can make use of parallel processing
+# Params:
+    # dates - a list of datetimes to process.  Link counts will be averaged over all of these
+    # pool - an optional multiprocessing Pool, which will be used for parallel processing
 def compute_all_link_counts(dates, pool=DefaultPool()):
     # Split the list and compute the link counts of all slices in parallel
     it = splitList(dates, pool._processes)
@@ -76,7 +82,39 @@ def load_consistent_link_set(dates, num_trips_threshold):
         (begin_node_id, end_node_id, avg_num_trips) in cur
         if avg_num_trips >= num_trips_threshold]
     return consistent_links
+
+
+
+
+
+def load_pace_vectors(dates, consistent_link_set):
+    # Map (begin_node,connecting_node) --> ID in the pace vector
+    link_id_map = defaultdict(lambda : -1) # -1 indicates an invalid ID number    
+    for i in xrange(len(consistent_link_set)):
+        key = consistent_link_set[i]
+        link_id_map[key] = i
+        
+    db_main.connect('db_functions/database.conf')
+    vects = []
+    for date in dates:
+        # Initialize to zero
+        vect = matrix(zeros((len(consistent_link_set), 1)))
+        
+        # Get the travel times for this datetime
+        curs = db_travel_times.get_travel_times_cursor(date)
+        
+        # Assign travel times into the vector, if this link is in the consistant link set
+        for (begin_node_id, end_node_id, datetime, travel_time, num_trips) in curs:
+            i = link_id_map[begin_node_id, end_node_id] # i will be -1 if the link is not in the consistant link set
+            if(i>=0):
+                vect[i] = travel_time
+        vects.append(vect)
     
+    db_main.close()
+    return vects
+
+
+
 # Loads link-level travel times into vectors.  Each vector represents a point in time, and
 # the dimension of these vectors is equal to the size of the consistent link set
 # (the links that consistently have a lot of trips on them)
@@ -98,35 +136,33 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
     logMsg("Loading consistent link set")
     consistent_link_set = load_consistent_link_set(dates, num_trips_threshold)
     
-    
     db_main.close()
     
-    logMsg("Generating vectors")
-    # Map (begin_node,connecting_node) --> ID in the pace vector
-    link_id_map = defaultdict(lambda : -1) # -1 indicates an invalid ID number    
-    for i in xrange(len(consistent_link_set)):
-        key = consistent_link_set[i]
-        link_id_map[key] = i
     
+    
+    logMsg("Generating vectors")
 
     #Initialize dictionaries    
     pace_timeseries = {}
     pace_grouped = defaultdict(list)
     dates_grouped = defaultdict(list)
 
+
+    # Split the dates into several pieces and use parallel processing to load the
+    # vectors for each of these dates
+    it = splitList(dates, pool._processes)
+    load_pace_vectors_consistent = partial(load_pace_vectors, consistent_link_set=consistent_link_set)
+    list_of_lists = pool.map(load_pace_vectors_consistent, it)
+    
+    logMsg("Merging outputs.")
+    # Flatten the vectors into one big list
+    vects = [vect for lst in list_of_lists for vect in lst]
+    
     # Loop through all dates - one vector will be created for each one
-    for date in dates:
-        # Initialize to zero
-        vect = matrix(zeros((len(consistent_link_set), 1)))
-        
-        # Get the travel times for this datetime
-        curs = db_travel_times.get_travel_times_cursor(date)
-        
-        # Assign travel times into the vector, if this link is in the consistant link set
-        for (begin_node_id, end_node_id, datetime, travel_time, num_trips) in curs:
-            i = link_id_map[begin_node_id, end_node_id] # i will be -1 if the link is not in the consistant link set
-            if(i>=0):
-                vect[i] = travel_time
+    for i in xrange(len(dates)):
+        date = dates[i]
+        vect = vects[i]
+      
         
         # Extract the date, hour of day, and day of week
         just_date = str(date.date())
@@ -139,6 +175,7 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
         #save the vector into the group
         pace_grouped[(weekday, hour)].append(vect)
         dates_grouped[(weekday, hour)].append(just_date)
+    
     
     # Assign trip names based on node ids
     trip_names = ["%d-->%d"%(start, end) for (start, end) in consistent_link_set]

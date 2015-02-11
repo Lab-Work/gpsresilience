@@ -235,6 +235,8 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False):
         
 
     logMsg("Done.")
+    
+    pool.close()
 
 if(__name__=="__main__"):
     generateTimeSeriesLeave1("4year_features", use_link_db=True)
