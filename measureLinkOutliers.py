@@ -27,10 +27,14 @@ import csv
     # num_obs - a dictionary that maps (begin_node_id, end_node_id) --> total number of trips
 def compute_link_counts(dates):
     num_obs = defaultdict(float)
+    db_main.connect
+    db_main.connect('db_functions/database.conf')
     for date in dates:
         curs = db_travel_times.get_travel_times_cursor(date)
         for [begin_node_id, end_node_id, datetime, travel_time, num_trips] in curs:
             num_obs[begin_node_id, end_node_id] += num_trips
+    
+    db_main.close()
     
     return num_obs
     
@@ -51,15 +55,17 @@ def compute_all_link_counts(dates, pool=DefaultPool()):
     # Divide the sums by the total number of dates, in order to get the average
     for key in merged_num_obs:
         merged_num_obs[key] /= len(dates)
-        
+    
+    db_main.connect('db_functions/database.conf')
     logMsg("Creating")
     db_travel_times.create_link_counts_table()
     logMsg("Saving")
     db_travel_times.save_link_counts(merged_num_obs)
+    db_main.close()
 
 # Determines the set of links that consistantly have many trips on them.  Specifically,
 # we want to keep links that have a high number of trips / hour.  These average link counts
-# come from the database table link_counts, which is created by compute_link_counts()
+# come from the database table link_counts, which is created by compute_all_link_counts()
 # Params:
     # dates - the dates that we want to analyze for obtaining the consistent link set
     # num_trips_threshold - only linkt hat have at least this many trips/hour will be kept
@@ -85,14 +91,14 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
     weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     
     # Connect to the database adn get hte available dates
-    db_main.connect('db_functions/database.conf')
+    
     dates = db_travel_times.get_available_dates()
     
     logMsg ("Computing consistent link set")
-    compute_link_counts(dates)
+    compute_all_link_counts(dates, pool=pool)
     
     logMsg("Loading consistent link set")
-    consistent_link_set = load_consistent_link_set(dates, num_trips_threshold, pool=pool)
+    consistent_link_set = load_consistent_link_set(dates, num_trips_threshold)
     
     
     logMsg("Generating vectors")
