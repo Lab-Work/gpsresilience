@@ -56,12 +56,10 @@ def compute_all_link_counts(dates, pool=DefaultPool()):
     for key in merged_num_obs:
         merged_num_obs[key] /= len(dates)
     
-    db_main.connect('db_functions/database.conf')
     logMsg("Creating")
     db_travel_times.create_link_counts_table()
     logMsg("Saving")
     db_travel_times.save_link_counts(merged_num_obs)
-    db_main.close()
 
 # Determines the set of links that consistantly have many trips on them.  Specifically,
 # we want to keep links that have a high number of trips / hour.  These average link counts
@@ -91,7 +89,7 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
     weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     
     # Connect to the database adn get hte available dates
-    
+    db_main.connect('db_functions/database.conf')
     dates = db_travel_times.get_available_dates()
     
     logMsg ("Computing consistent link set")
@@ -100,6 +98,8 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
     logMsg("Loading consistent link set")
     consistent_link_set = load_consistent_link_set(dates, num_trips_threshold)
     
+    
+    db_main.close()
     
     logMsg("Generating vectors")
     # Map (begin_node,connecting_node) --> ID in the pace vector
