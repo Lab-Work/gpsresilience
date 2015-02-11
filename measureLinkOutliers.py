@@ -12,16 +12,19 @@ from numpy import matrix, zeros
 from routing.Map import Map
 
 from collections import defaultdict
+from tools import DefaultPool, splitList, logMsg
 import csv
 
 
 
 
 
-# Computes the average number of trips/hour over each link of the map, then saves
-# these counts in the database.
+# Computes the average number of trips/hour over each link of the map, and returns
+# them in a dictionary
 # Params:
     # dates - a list of dates to average over
+# Returns:
+    # num_obs - a dictionary that maps (begin_node_id, end_node_id) --> total number of trips
 def compute_link_counts(dates):
     num_obs = defaultdict(float)
     for date in dates:
@@ -29,15 +32,30 @@ def compute_link_counts(dates):
         for [begin_node_id, end_node_id, datetime, travel_time, num_trips] in curs:
             num_obs[begin_node_id, end_node_id] += num_trips
     
-    for key in num_obs:
-        num_obs[key] /= len(dates)
+    return num_obs
     
-    print("Creating")
+    
+
+
+def compute_all_link_counts(dates, pool=DefaultPool()):
+    # Split the list and compute the link counts of all slices in parallel
+    it = splitList(dates, pool._processes)
+    num_obs_list = pool.map(compute_link_counts, it)
+
+    # Merge the outputs by summing each link count
+    merged_num_obs = defaultdict(float)
+    for num_obs in num_obs_list:
+        for key in num_obs:
+            merged_num_obs[key] += num_obs[key]
+
+    # Divide the sums by the total number of dates, in order to get the average
+    for key in merged_num_obs:
+        merged_num_obs[key] /= len(dates)
+        
+    logMsg("Creating")
     db_travel_times.create_link_counts_table()
-    print("Saving")
-    db_travel_times.save_link_counts(num_obs)
-
-
+    logMsg("Saving")
+    db_travel_times.save_link_counts(merged_num_obs)
 
 # Determines the set of links that consistantly have many trips on them.  Specifically,
 # we want to keep links that have a high number of trips / hour.  These average link counts
@@ -63,21 +81,21 @@ def load_consistent_link_set(dates, num_trips_threshold):
 # Returns:
     # a list of Numpy column vectors, each element of these vectors represents
     # the travel time on a specific link of the road network
-def load_pace_data(num_trips_threshold=50):
+def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
     weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     
     # Connect to the database adn get hte available dates
     db_main.connect('db_functions/database.conf')
     dates = db_travel_times.get_available_dates()
     
-    print ("Computing consistent link set")
+    logMsg ("Computing consistent link set")
     compute_link_counts(dates)
     
-    print("Loading consistent link set")
-    consistent_link_set = load_consistent_link_set(dates, num_trips_threshold)
+    logMsg("Loading consistent link set")
+    consistent_link_set = load_consistent_link_set(dates, num_trips_threshold, pool=pool)
     
     
-    print("Running analysis")
+    logMsg("Generating vectors")
     # Map (begin_node,connecting_node) --> ID in the pace vector
     link_id_map = defaultdict(lambda : -1) # -1 indicates an invalid ID number    
     for i in xrange(len(consistent_link_set)):
@@ -129,7 +147,7 @@ def load_pace_data(num_trips_threshold=50):
 
 # Debug method that draws the roadmap as a figure
 def drawFigure(filename, road_map, num_obs):
-    print("Writing " + filename)
+    logMsg("Writing " + filename)
     with open(filename, 'w') as f:
         csvw = csv.writer(f)
         csvw.writerow(['begin_node','end_node', 'begin_lat', 'begin_lon', 

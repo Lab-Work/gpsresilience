@@ -259,7 +259,6 @@ class IndependentGroupedStats:
         else:
             (mean, var, vect) = self.getIncompleteMeanAndVar(vect)
         
-        print("Dimension : %d" % len(vect))
    
         try:
             mahal = (transpose(vect - mean) / var) * (vect - mean)

@@ -181,13 +181,16 @@ def reduceOutputs(outputList):
         # If False, will use aggregated info from OD region pairs
     #returns - no return value, but saves files into results/...
 def generateTimeSeriesLeave1(inDir, use_link_db=False):
+    
+    pool = Pool(NUM_PROCESSORS) #Prepare for parallel processing
+
     numpy.set_printoptions(linewidth=1000, precision=4)
     
     #Read the time-series data from the file
     logMsg("Reading files...")
     if(use_link_db):
         file_prefix = "link_"
-        (pace_timeseries, pace_grouped, dates_grouped, trip_names) = load_pace_data()
+        (pace_timeseries, pace_grouped, dates_grouped, trip_names) = load_pace_data(pool=pool)
     else:
         file_prefix = "coarse_"
         (pace_timeseries, pace_grouped, dates_grouped, trip_names) = readPaceData(inDir)
@@ -198,7 +201,6 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False):
 
     logMsg("Starting processes")
 
-    pool = Pool(NUM_PROCESSORS) #Prepare for parallel processing
     gIter = groupIterator(pace_grouped, dates_grouped, diag=use_link_db) #Iterator breaks the data into groups
     
     outputList = pool.map(processGroup, gIter) #Run all of the groups, using as much parallel computing as possible

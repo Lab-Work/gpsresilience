@@ -41,6 +41,7 @@ def logPerc(num, outof, digits):
 	#v1, v2 - Numpy matrices
 def euclideanDist(v1, v2):
 	return norm(v1 - v2)
+
 	
 
 
@@ -212,6 +213,11 @@ def splitRange(size, numSegments):
 		yield (lo,hi)
 
 
+def splitList(lst, numSegments):
+    for (lo, hi) in splitRange(len(lst), numSegments):
+        yield lst[lo:hi]
+
+
 #Returns an arbitrary element from a collection or iterable.  Generally the first one
 #Arguments:
 	#my_collection - some collection or iterable like a set, list, or dictionary
@@ -247,5 +253,13 @@ def connectToDB(confFilename):
 		conn = psycopg2.connect(connString)
 		return conn
 		
-	
+
+# A simple class which emulates the behavior of a Process Pool, but only uses
+# one CPU.  Useful for 
+class DefaultPool():
+    def __init__(self):
+        self._processes=1
+    def map(self, fun, args):
+        return map(fun, args)
+    
 	
