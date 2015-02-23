@@ -5,7 +5,7 @@ Created on Tue Sep 30 19:28:30 2014
 @author: Brian Donovan (briandonovan100@gmail.com)
 """
 from tools import *
-from numpy import transpose, matrix, nonzero, ravel, diag, sqrt, where, square, zeros
+from numpy import transpose, matrix, nonzero, ravel, diag, sqrt, where, square, zeros, multiply
 from numpy.linalg import inv, eig
 
 from random import random
@@ -161,16 +161,37 @@ class GroupedStats:
 # Assumes that all elements are uncorrelated - that is, we are extracting
 # only the diagonal elements of the covariance matrix
 class IndependentGroupedStats:
-    def __init__(self, group_of_vectors):
+    # Default constructor.
+    # Params:
+        # group_of_vectors - a list of Numpy column vectors, on which to compute stats
+        # group_of_weights - a list of Numpy column vectors.  Indicates which dimensions
+            # will have how much weight for each of the vectors.
+    def __init__(self, group_of_vectors, group_of_weights=None):
         self.count = 0.0
         self.s_x = 0.0
         self.s_xxt = 0.0
         
+        if(group_of_weights is None):
+            self.weighted = False
+        else:
+            self.weighted = True
+            self.s_w2 = 0.0
+
+        
         #Iterate through mean pace vectors, updating the counts and sums
-        for meanPaceVector in group_of_vectors:
-            self.s_x += meanPaceVector
-            self.s_xxt += square(meanPaceVector)
-            self.count += (meanPaceVector!=0)*1
+        for i in xrange(len(group_of_vectors)):
+            meanPaceVector = group_of_vectors[i]
+            
+            if(group_of_weights is None):
+                self.s_x += meanPaceVector
+                self.s_xxt += square(meanPaceVector)
+                self.count += (meanPaceVector!=0)*1
+            else:                
+                weightVector = group_of_weights[i]
+                self.s_x += multiply(meanPaceVector, weightVector)
+                self.s_xxt += multiply(square(meanPaceVector), weightVector)
+                self.s_w2 += square(weightVector)
+                self.count += weightVector
     
     #Make a copy of this GroupedStats object
     #returns: A GroupedStats object, identical to this one
@@ -182,6 +203,8 @@ class IndependentGroupedStats:
         cpy.count = matrix(self.count)
         cpy.s_x = matrix(self.s_x)
         cpy.s_xxt = matrix(self.s_xxt)
+        cpy.weighted = self.weighted
+        cpy.s_w2 = self.s_w2
         
         #return the copy
         return cpy
@@ -196,8 +219,14 @@ class IndependentGroupedStats:
              
         mean = self.s_x / self.count
         
-        #var(x) = E[x**2] - E[x]**2.  Multiply by n/(n-1) for unbiased covariance correction
-        var = (self.s_xxt / self.count - square(mean)) / ((self.count - 1)/self.count)
+        # Theh unbiased correction is different for the weighted / unweighted cases.
+        if(not self.weighted):
+            unbiased_correction = self.count / (self.count - 1)
+        else:
+            unbiased_correction = square(self.count) / (square(self.count) - self.s_w2)
+            
+        biased_var = (self.s_xxt / self.count) - square(mean)
+        var = multiply(biased_var, unbiased_correction) 
         
         return (mean, var)
     
@@ -248,22 +277,32 @@ class IndependentGroupedStats:
     #Returns the mahalanobis distance of a vector from the mean
     #This is one way of measuring how much of an outlier that vector is
     #params:
-        # vector - A vector to measure
-        # normalize_num_dimensions - if True, mahalanobis will divide by the number of
+        # vector - A numpy column vector to measure
+        # feature_weights - A vector of the same size as "vect" that specify weights
+            # on individual dimensions.  It is recommended to set normalize=True if
+            # feature_weights are used, so the weights can be normalized
+        # normalize - if True, mahalanobis will divide by the number of
             # dimensions before taking the square root.  This makes a fairer comparison between
             # cases that do not have the same number of dimensions
     #returns a positive number representing the mahalanobis distance
-    def mahalanobisDistance(self, vect, normalize_num_dimensions=False):
-        if(allNonzero(vect)):
+    def mahalanobisDistance(self, vect, feature_weights = None, normalize=False):
+        if(allNonzero(vect) or (not feature_weights is None)):
             (mean, var) = self.getMeanAndVar()
         else:
             (mean, var, vect) = self.getIncompleteMeanAndVar(vect)
         
    
         try:
-            mahal = (transpose(vect - mean) / var) * (vect - mean)
-            if(normalize_num_dimensions):
-                mahal[0,0] /= len(mahal)
+            if(feature_weights is None):
+                mahal = (transpose(vect - mean) / var) * (vect - mean)
+                if(normalize):
+                    mahal[0,0] /= len(mahal)
+            else:
+                mahal = (transpose(vect - mean) / var) * multiply((vect - mean), feature_weights)
+                if(normalize):
+                    mahal[0,0] /= sum(feature_weights)
+                
+                
             
             return sqrt(mahal[0,0])
         except:
@@ -301,27 +340,42 @@ class IndependentGroupedStats:
 #Using a leave-one-out estimate.  Also computes the element-wise standardized vector (z-scores)
 #params:
     #vectors - a list of Numpy vectors
-      #independent - If True, correlations between dimensions will be ignored
-          # (i.e. a diagonal covariance matrix will be used)
+    #independent - If True, correlations between dimensions will be ignored
+        # (i.e. a diagonal covariance matrix will be used)
+    # group_of_weights - A list of Numpy Column vectors, indicating feature-by-feature weights
+        # for each vector
+    # normalize- If True, the Mahalanobis Distance will be divided by the total
+        # number of nonzero elements of the vector (or the total weight if weights
+        # are given) before the square root is taken.  This ensures a fair comparison
+        # between vectors if data is missing or weights have very different magnitudes
 #returns:
     # distances - a list of Mahalanobis distances,  correspondign to the input vectors
     # zscores - a list of standardized vectors, corresponding to the input vectors
-def computeMahalanobisDistances(vectors, independent=False):
+def computeMahalanobisDistances(vectors, independent=False, group_of_weights=None, normalize=False):
     #compute the groupedStats for the vectors
     if(independent):
-        groupedStats = IndependentGroupedStats(vectors)
+        groupedStats = IndependentGroupedStats(vectors, group_of_weights=group_of_weights)
     else:
         groupedStats = GroupedStats(vectors)
     
     distances = []
     zscores = []
     #We want to compute the Mahalanobis distance for each vector
-    for vect in vectors:
+    for i in xrange(len(vectors)):
+        # Grab the vector (and the corresponding feature weights if necessary)
+        vect = vectors[i]
+        if(group_of_weights is None):
+            feature_weights = None
+        else:
+            feature_weights = group_of_weights[i]
+            
         #Get the leave-one-out stats
         stats = groupedStats.generateLeave1Stats(vect)
         #stats = groupedStats
         #Use these to compute the mahalanobis distance from this vector, and add to list
-        mahalanobisDistance = stats.mahalanobisDistance(vect)
+        mahalanobisDistance = stats.mahalanobisDistance(vect,
+                                                        feature_weights=feature_weights,
+                                                        normalize=normalize)
         distances.append(mahalanobisDistance)
         
         #Compute the element-wise standardized vector
@@ -350,7 +404,10 @@ def genVectors(num, dim, p_zero):
 
 # A simple test case
 if(__name__=="__main__"):
-    vects = genVectors(1000,10000,.9)
-    d,z = computeMahalanobisDistances(vects, independent=True)
+    vects = genVectors(1000,1000, 0)
+    weights = genVectors(1000,1000, .2)
+    
+    
+    d,z = computeMahalanobisDistances(vects, independent=True, group_of_weights = weights, normalize=True)
     print(d)
     

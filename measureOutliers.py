@@ -111,11 +111,13 @@ def readGlobalPace(dirName):
     #A tuple (paceGroup, dateGroup, hour, weekday) - see groupIterator()
 #returns:
     #A list of tuples, each of which contain various types of outlier scores for each date
-def processGroup((paceGroup, dateGroup, hour, weekday, diag)):
+def processGroup((paceGroup, weightGroup, dateGroup, hour, weekday, diag, normalize)):
     logMsg("Processing " + weekday + " " + str(hour))
     
     #Compute mahalanobis outlier scores
-    (mahals, group_zscores) = computeMahalanobisDistances(paceGroup, independent=diag)
+    (mahals, group_zscores) = computeMahalanobisDistances(paceGroup, independent=diag,
+                                                        group_of_weights=weightGroup,
+                                                        normalize=normalize)
     
     #compute local outlier factors with various k parameters
     lofs1 = getLocalOutlierFactors(paceGroup, 1)
@@ -144,15 +146,21 @@ def processGroup((paceGroup, dateGroup, hour, weekday, diag)):
 #params:
     #pace_grouped - Lists of vectors, indexed by weekday/hour pair - see readPaceData()
     #date_grouped - Date strings, indexd by weekday/hour pair - see readPaceData()
-def groupIterator(pace_grouped, dates_grouped, diag=False):
+def groupIterator(pace_grouped, weights_grouped, dates_grouped, diag=False, normalize=False):
     #Iterate through weekday/hour pairs
     for (weekday, hour) in pace_grouped:
         #Grab the list of vectors
         paceGroup = pace_grouped[weekday, hour]
         #grab the list of dates
         dateGroup = dates_grouped[weekday, hour]
+        
+        if(weights_grouped is None):
+            weightGroup = None
+        else:
+            weightGroup = weights_grouped[weekday, hour]
+            
         #Each output contains these lists, as well as the hour and day of week
-        yield (paceGroup, dateGroup, hour, weekday, diag)
+        yield (paceGroup, dateGroup, weightGroup, hour, weekday, diag, normalize)
 
 #Merges many group scores - see the output of processGroup() - into one
 #params:
@@ -180,20 +188,31 @@ def reduceOutputs(outputList):
     #use_link_db - if True, will use link-by-link travel times from the DB.
         # If False, will use aggregated info from OD region pairs
     #returns - no return value, but saves files into results/...
-def generateTimeSeriesLeave1(inDir, use_link_db=False):
+def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=20, 
+                             use_feature_weights=False, normalize=False):
     
-    pool = Pool(NUM_PROCESSORS) #Prepare for parallel processing
+    #pool = Pool(NUM_PROCESSORS) #Prepare for parallel processing
+    pool = DefaultPool()
 
     numpy.set_printoptions(linewidth=1000, precision=4)
     
     #Read the time-series data from the file
     logMsg("Reading files...")
     if(use_link_db):
-        file_prefix = "link_"
-        (pace_timeseries, pace_grouped, dates_grouped, trip_names) = load_pace_data(pool=pool)
+        file_prefix = "link_%d_" % consistent_threshold
+        if(use_feature_weights):
+            file_prefix += "weighted_"
+        
+        if(normalize):
+            file_prefix += "normalize_"
+        
+        (pace_timeseries, pace_grouped, dates_grouped, weights_grouped, trip_names) = load_pace_data(pool=pool)
+        if(use_feature_weights is None):
+            weights_grouped = None
     else:
         file_prefix = "coarse_"
         (pace_timeseries, pace_grouped, dates_grouped, trip_names) = readPaceData(inDir)
+        weights_grouped = None
 
     #Also get global pace information
     global_pace_timeseries = readGlobalPace(inDir)
@@ -201,7 +220,9 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False):
 
     logMsg("Starting processes")
 
-    gIter = groupIterator(pace_grouped, dates_grouped, diag=use_link_db) #Iterator breaks the data into groups
+    #Iterator breaks the data into groups
+    gIter = groupIterator(pace_grouped, weights_grouped, dates_grouped,
+                          diag=use_link_db, normalize=normalize) 
     
     outputList = pool.map(processGroup, gIter) #Run all of the groups, using as much parallel computing as possible
 
@@ -239,4 +260,12 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False):
     pool.close()
 
 if(__name__=="__main__"):
+    logMsg("Running raw analysis")
     generateTimeSeriesLeave1("4year_features", use_link_db=True)
+    
+    logMsg("Running normalized analysis")
+    generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True)
+    
+    logMsg("Running weighted analysis")
+    generateTimeSeriesLeave1("4year_features", use_link_db=True, use_feature_weights=True, normalize=True)
+    
