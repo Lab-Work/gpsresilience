@@ -191,8 +191,8 @@ def reduceOutputs(outputList):
 def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=20, 
                              use_feature_weights=False, normalize=False):
     
-    #pool = Pool(NUM_PROCESSORS) #Prepare for parallel processing
-    pool = DefaultPool()
+    pool = Pool(NUM_PROCESSORS) #Prepare for parallel processing
+    #pool = DefaultPool()
 
     numpy.set_printoptions(linewidth=1000, precision=4)
     

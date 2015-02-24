@@ -171,8 +171,8 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
     
     logMsg("Merging outputs.")
     # Flatten the vectors into one big list
-    vects = [vect for lst in list_of_lists for vect, weight in lst]
-    weights = [weight for lst in list_of_lists for vect, weight in lst]
+    vects = [vect for vect_lst, weight_lst in list_of_lists for vect in vect_lst]
+    weights = [weight for vect_lst, weight_lst in list_of_lists for weight in weight_lst]
     
     # Loop through all dates - one vector will be created for each one
     for i in xrange(len(dates)):
