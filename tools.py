@@ -6,7 +6,7 @@ Created on Sat May  3 12:33:42 2014
 
 @author: brian
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 import math
 import re
 #import psycopg2
@@ -97,7 +97,7 @@ def normalize(vector):
 	#delta - a timedelta object.  The step size
 #Yields:
 	#All intermediate dates between start_date and end_date, with time intervals given by delta
-def dateRange(start_date, end_date, delta):
+def dateRange(start_date, end_date, delta=timedelta(hours=1)):
 	d = start_date
 	while(d < end_date):
 		yield d
@@ -259,7 +259,11 @@ def connectToDB(confFilename):
 class DefaultPool():
     def __init__(self):
         self._processes=1
+        
     def map(self, fun, args):
         return map(fun, args)
+    
+    def close(self):
+        pass
     
 	

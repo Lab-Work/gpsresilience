@@ -167,15 +167,17 @@ class IndependentGroupedStats:
         # group_of_weights - a list of Numpy column vectors.  Indicates which dimensions
             # will have how much weight for each of the vectors.
     def __init__(self, group_of_vectors, group_of_weights=None):
+        #import pdb; pdb.set_trace()
         self.count = 0.0
         self.s_x = 0.0
         self.s_xxt = 0.0
+        self.s_w2 = 0.0
         
         if(group_of_weights is None):
             self.weighted = False
         else:
             self.weighted = True
-            self.s_w2 = 0.0
+            
 
         
         #Iterate through mean pace vectors, updating the counts and sums
@@ -286,7 +288,7 @@ class IndependentGroupedStats:
             # cases that do not have the same number of dimensions
     #returns a positive number representing the mahalanobis distance
     def mahalanobisDistance(self, vect, feature_weights = None, normalize=False):
-        if(allNonzero(vect) or (not feature_weights is None)):
+        if(allNonzero(vect) or (feature_weights!=None)):
             (mean, var) = self.getMeanAndVar()
         else:
             (mean, var, vect) = self.getIncompleteMeanAndVar(vect)
@@ -295,19 +297,23 @@ class IndependentGroupedStats:
         try:
             if(feature_weights is None):
                 mahal = (transpose(vect - mean) / var) * (vect - mean)
+                print("Not weight")
                 if(normalize):
-                    mahal[0,0] /= len(mahal)
+                    print("Normalize %d"%len(vect))
+                    mahal /= len(vect)
             else:
-                mahal = (transpose(vect - mean) / var) * multiply((vect - mean), feature_weights)
+                weighted_diff = multiply((vect-mean), feature_weights)
+                mahal = (transpose(weighted_diff) / var) * weighted_diff
+                print("Weight")
                 if(normalize):
-                    mahal[0,0] /= sum(feature_weights)
+                    print("Normalize %d" % sum(square(feature_weights)))
+                    mahal /= sum(square(feature_weights))
                 
                 
             
             return sqrt(mahal[0,0])
         except:
-            print vect
-            print var
+            print "%d , %d ???"%(len(vect), sum(square(feature_weights)))
                    
     
     #Computes the element-wise standardized vector (zscores)

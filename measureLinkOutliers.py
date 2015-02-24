@@ -10,8 +10,8 @@ Functions to load link-by-link traffic conditions as vectors, for use in measure
 from db_functions import db_main, db_travel_times
 from numpy import matrix, zeros
 from routing.Map import Map
-from tools import DefaultPool, splitList, logMsg
-
+from tools import DefaultPool, splitList, logMsg, dateRange
+from datetime import datetime
 
 from collections import defaultdict
 from functools import partial
@@ -32,7 +32,7 @@ def compute_link_counts(dates):
     db_main.connect('db_functions/database.conf')
     for date in dates:
         curs = db_travel_times.get_travel_times_cursor(date)
-        for [begin_node_id, end_node_id, datetime, travel_time, num_trips] in curs:
+        for [begin_node_id, end_node_id, date_time, travel_time, num_trips] in curs:
             num_obs[begin_node_id, end_node_id] += num_trips
     
     db_main.close()
@@ -113,7 +113,7 @@ def load_pace_vectors(dates, consistent_link_set):
         curs = db_travel_times.get_travel_times_cursor(date)
         
         # Assign travel times into the vector, if this link is in the consistant link set
-        for (begin_node_id, end_node_id, datetime, travel_time, num_trips) in curs:
+        for (begin_node_id, end_node_id, date_time, travel_time, num_trips) in curs:
             i = link_id_map[begin_node_id, end_node_id] # i will be -1 if the link is not in the consistant link set
             if(i>=0):
                 vect[i] = travel_time
@@ -142,6 +142,8 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
     logMsg ("Getting relevant dates.")
     db_main.connect('db_functions/database.conf')
     dates = db_travel_times.get_available_dates()
+    #dates = list(dateRange(datetime(2012,1,1), datetime(2012,1,23))) 
+    
     
     #logMsg ("Computing consistent link set")
     #compute_all_link_counts(dates, pool=pool)

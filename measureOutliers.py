@@ -160,7 +160,7 @@ def groupIterator(pace_grouped, weights_grouped, dates_grouped, diag=False, norm
             weightGroup = weights_grouped[weekday, hour]
             
         #Each output contains these lists, as well as the hour and day of week
-        yield (paceGroup, dateGroup, weightGroup, hour, weekday, diag, normalize)
+        yield (paceGroup, weightGroup, dateGroup, hour, weekday, diag, normalize)
 
 #Merges many group scores - see the output of processGroup() - into one
 #params:
@@ -192,7 +192,6 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=20,
                              use_feature_weights=False, normalize=False):
     
     pool = Pool(NUM_PROCESSORS) #Prepare for parallel processing
-    #pool = DefaultPool()
 
     numpy.set_printoptions(linewidth=1000, precision=4)
     
@@ -206,8 +205,8 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=20,
         if(normalize):
             file_prefix += "normalize_"
         
-        (pace_timeseries, pace_grouped, dates_grouped, weights_grouped, trip_names) = load_pace_data(pool=pool)
-        if(use_feature_weights is None):
+        pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names = load_pace_data(pool=pool)
+        if(use_feature_weights==False):
             weights_grouped = None
     else:
         file_prefix = "coarse_"
@@ -220,9 +219,11 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=20,
 
     logMsg("Starting processes")
 
+    
     #Iterator breaks the data into groups
     gIter = groupIterator(pace_grouped, weights_grouped, dates_grouped,
-                          diag=use_link_db, normalize=normalize) 
+                          diag=use_link_db, normalize=normalize)
+                          
     
     outputList = pool.map(processGroup, gIter) #Run all of the groups, using as much parallel computing as possible
 
@@ -260,8 +261,8 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=20,
     pool.close()
 
 if(__name__=="__main__"):
-    logMsg("Running raw analysis")
-    generateTimeSeriesLeave1("4year_features", use_link_db=True)
+    #logMsg("Running raw analysis")
+    #generateTimeSeriesLeave1("4year_features", use_link_db=True)
     
     logMsg("Running normalized analysis")
     generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True)
