@@ -188,7 +188,7 @@ def reduceOutputs(outputList):
     #use_link_db - if True, will use link-by-link travel times from the DB.
         # If False, will use aggregated info from OD region pairs
     #returns - no return value, but saves files into results/...
-def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=20, 
+def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=300, 
                              use_feature_weights=False, normalize=False):
     
     pool = Pool(NUM_PROCESSORS) #Prepare for parallel processing
@@ -205,7 +205,7 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=20,
         if(normalize):
             file_prefix += "normalize_"
         
-        pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names = load_pace_data(pool=pool)
+        pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names = load_pace_data(num_trips_threshold=consistent_threshold, pool=pool)
         if(use_feature_weights==False):
             weights_grouped = None
     else:
