@@ -12,6 +12,7 @@ from multiprocessing import Pool
 
 from mahalanobis import *
 from eventDetection import *
+from traffic_estimation.plot_estimates import make_video, build_speed_dicts
 from lof import *
 from tools import *
 
@@ -112,7 +113,7 @@ def readGlobalPace(dirName):
 #returns:
     #A list of tuples, each of which contain various types of outlier scores for each date
 def processGroup((paceGroup, weightGroup, dateGroup, hour, weekday, diag, normalize)):
-    logMsg("Processing " + weekday + " " + str(hour))
+    #logMsg("Processing " + weekday + " " + str(hour))
     
     #Compute mahalanobis outlier scores
     (mahals, group_zscores) = computeMahalanobisDistances(paceGroup, independent=diag,
@@ -188,10 +189,11 @@ def reduceOutputs(outputList):
     #use_link_db - if True, will use link-by-link travel times from the DB.
         # If False, will use aggregated info from OD region pairs
     #returns - no return value, but saves files into results/...
-def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=300, 
-                             use_feature_weights=False, normalize=False):
+def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=50, 
+                             use_feature_weights=False, normalize=False, make_zscore_vid=False):
     
     pool = Pool(NUM_PROCESSORS) #Prepare for parallel processing
+    #pool = DefaultPool()
 
     numpy.set_printoptions(linewidth=1000, precision=4)
     
@@ -205,7 +207,9 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=300,
         if(normalize):
             file_prefix += "normalize_"
         
-        pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names = load_pace_data(num_trips_threshold=consistent_threshold, pool=pool)
+        pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names, consistent_link_set = load_pace_data(
+            num_trips_threshold=consistent_threshold, pool=pool)
+            
         if(use_feature_weights==False):
             weights_grouped = None
     else:
@@ -254,6 +258,21 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=300,
     for (date, hour, weekday) in sorted(zscores):
         std_vect = zscores[date, hour, weekday]
         zscoreWriter.writerow([date, hour, weekday] + ravel(std_vect).tolist())
+
+
+    #def make_video(tmp_folder, filename_base, pool=DefaultPool(), dates=None, speed_dicts=None)
+    if(make_zscore_vid):
+        logMsg("Making speed dicts")
+        #zscore_list = [zscores[key] for key in sorted(zscores)]
+        date_list = dates = [datetime(2012,10,21) + timedelta(hours=1)*x for x in range(168*3)]
+        weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']        
+        zscore_list = [zscores[str(d.date()), d.hour, weekday_names[d.weekday()]] for d in date_list]
+
+        speed_dicts = build_speed_dicts(consistent_link_set, zscore_list)
+        logMsg("Making video")
+        make_video("tmp_vid", "zscore_vid", pool=pool, dates=date_list, speed_dicts=speed_dicts)
+        
+        
         
 
     logMsg("Done.")
@@ -265,8 +284,8 @@ if(__name__=="__main__"):
     #generateTimeSeriesLeave1("4year_features", use_link_db=True)
     
     logMsg("Running normalized analysis")
-    generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True)
+    generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True, make_zscore_vid=True)
     
-    logMsg("Running weighted analysis")
-    generateTimeSeriesLeave1("4year_features", use_link_db=True, use_feature_weights=True, normalize=True)
+    #logMsg("Running weighted analysis")
+    #generateTimeSeriesLeave1("4year_features", use_link_db=True, use_feature_weights=True, normalize=True)
     

@@ -297,16 +297,12 @@ class IndependentGroupedStats:
         try:
             if(feature_weights is None):
                 mahal = (transpose(vect - mean) / var) * (vect - mean)
-                print("Not weight")
                 if(normalize):
-                    print("Normalize %d"%len(vect))
                     mahal /= len(vect)
             else:
                 weighted_diff = multiply((vect-mean), feature_weights)
                 mahal = (transpose(vect-mean) / var) * weighted_diff
-                print("Weight")
                 if(normalize):
-                    print("Normalize %d" % sum(feature_weights))
                     mahal /= sum(feature_weights)
                 
                 

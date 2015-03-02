@@ -141,8 +141,8 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
     # Connect to the database adn get hte available dates
     logMsg ("Getting relevant dates.")
     db_main.connect('db_functions/database.conf')
-    dates = db_travel_times.get_available_dates()
-    #dates = list(dateRange(datetime(2012,1,1), datetime(2012,1,23))) 
+    #dates = db_travel_times.get_available_dates()
+    dates = list(dateRange(datetime(2012,10,21), datetime(2012,11,11))) 
     
     
     #logMsg ("Computing consistent link set")
@@ -201,7 +201,8 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
     # Assign trip names based on node ids
     trip_names = ["%d-->%d"%(start, end) for (start, end) in consistent_link_set]
             
-    return (pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names)
+    return (pace_timeseries, pace_grouped, weights_grouped, dates_grouped,
+                trip_names, consistent_link_set)
 
 
 
