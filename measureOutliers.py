@@ -286,6 +286,6 @@ if(__name__=="__main__"):
     logMsg("Running normalized analysis")
     generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True, make_zscore_vid=True)
     
-    #logMsg("Running weighted analysis")
-    #generateTimeSeriesLeave1("4year_features", use_link_db=True, use_feature_weights=True, normalize=True)
+    logMsg("Running weighted analysis")
+    generateTimeSeriesLeave1("4year_features", use_link_db=True, use_feature_weights=True, normalize=True)
     
