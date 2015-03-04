@@ -34,8 +34,8 @@ addEvents = function(s, filename){
 
 	#read events from file
 	events = read.csv(filename)
-	events$start_date = strptime(as.character(events$start_date), "%Y-%m-%d %H:%M:%S")
-	events$end_date = strptime(as.character(events$end_date), "%Y-%m-%d %H:%M:%S")
+	events$start_date = strptime(as.character(events$start_date), "%Y-%m-%d %H:%M:%s_")
+	events$end_date = strptime(as.character(events$end_date), "%Y-%m-%d %H:%M:%s_")
 
 
 	#Compute the x values by subtracting the date from the beginning of this time window
@@ -334,6 +334,7 @@ makeThrashingPlot = function(startDate, endDate, inFile, events1, events2, outFi
 
 
 #Make probability plots for several interesting events
+
 makeplot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/event_Sandy_mahal.pdf", "Event Detection")
 makeplot("2010-12-20", "2011-01-09", "results/outlier_scores.csv", "results/event_Blizzard_mahal.pdf", "Event Detection")
 makeplot("2011-08-21", "2011-09-11", "results/outlier_scores.csv", "results/event_Irene_mahal.pdf", "Event Detection")
@@ -343,9 +344,24 @@ makeplot("2013-10-06", "2013-10-27", "results/outlier_scores.csv", "results/even
 
 
 #Make a plot to demonstrate thrashing
-makeThrashingPlot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/events_nomerge.csv", "results/events_sorted.csv", "results/thrashing.pdf")	
+#makeThrashingPlot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/events_nomerge.csv", "results/events_sorted.csv", "results/thrashing.pdf")	
 
 
-#Make a plot to compare kernel & gaussian densities
-#makeKernPlot("2012-10-21", "2012-11-11", "results/lnl_over_time_leave1.csv", "results/likelihood_kern.pdf", "Event Detection")
+
+plotGroup = function(prefix){
+	makeplot("2012-10-21", "2012-11-11", sprintf("results/%s_outlier_scores.csv", prefix), sprintf("results/event_%s_Sandy_mahal.pdf", prefix), "Event Detection")
+	makeplot("2010-12-20", "2011-01-09", sprintf("results/%s_outlier_scores.csv", prefix), sprintf("results/event_%s_Blizzard_mahal.pdf", prefix), "Event Detection")
+	makeplot("2011-08-21", "2011-09-11", sprintf("results/%s_outlier_scores.csv", prefix), sprintf("results/event_%s_Irene_mahal.pdf", prefix), "Event Detection")
+	makeplot("2013-02-03", "2013-02-24", sprintf("results/%s_outlier_scores.csv", prefix), sprintf("results/event_%s_Blizzard2_mahal.pdf", prefix), "Event Detection")
+	makeplot("2010-02-21", "2010-03-14", sprintf("results/%s_outlier_scores.csv", prefix), sprintf("results/event_%s_Blizzard3_mahal.pdf", prefix), "Event Detection")
+	makeplot("2013-10-06", "2013-10-27", sprintf("results/%s_outlier_scores.csv", prefix), sprintf("results/event_%s_October_mahal.pdf", prefix), "Event Detection")
+}
+
+plotGroup("link_20_normalize")
+plotGroup("link_20_weighted_normalize")
+plotGroup("link_50_normalize")
+plotGroup("link_50_weighted_normalize")
+plotGroup("link_300_normalize")
+plotGroup("link_300_weighted_normalize")
+
 
