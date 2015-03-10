@@ -176,7 +176,7 @@ makeMainPlot = function(startDate, endDate, mainTitle, type, crush=F){
 	if(crush){
 		par(mar=c(1,3,1,.4))	#Decrease margins
 		extra_height=0		#Don't leave room for tags
-		pt_size = 1		#Control size of plotted points
+		pt_size = .8		#Control size of plotted points
 		region_label_size = 2	#Control size of y axis label
 		mainTitleSize=2
 		mainTitle = ""		#No main title
@@ -241,7 +241,7 @@ makeMainPlot = function(startDate, endDate, mainTitle, type, crush=F){
 	short_dates = shortenDates(s$Date)
 	
 	if(crush){
-		axis(1, at=a, labels=short_dates[a], cex.axis=1, pos=2.5)
+		axis(1, at=a, labels=short_dates[a], cex.axis=1, pos=2.5, lty=0)
 	}
 	else{
 		axis(1, at=a, labels=short_dates[a], cex.axis=1, pos=0)
@@ -307,6 +307,27 @@ plot3Weeks = function(weekDates, type){
 	title(main="Mean Pace Vector - Three Typical Weeks", outer=T, cex.main=2)
 }
 
+
+#Produces a plot with three weeks of mean pace vectors and a legend
+#Arguments:
+	#weekDates - A vector of consecutive Sunday dates (strings).  Should contain 4 dates, which divide up the three weeks
+	#type - either "absolute" or "standardized"
+plot1Week = function(weekDates, type){
+	#Layout contains 4 plots - 3 big ones for the main plots, and 1 small one for the legend
+	layout(matrix(1:2,2), heights=c(6, 2))
+	
+	#Add the first 3 main plots
+	makeMainPlot(weekDates[1], weekDates[2], weekDates[1], type, crush=T)
+
+
+	#Add the legend in the last plot  
+	addLegend(type, crush=T)
+	
+	#Add an overall title
+	title(main="Mean Pace Vector - Three Typical Weeks", outer=T, cex.main=2)
+}
+
+
 ###########################################################################################
 ############################## MAIN CODE BEGINS HERE ######################################
 ###########################################################################################
@@ -346,5 +367,12 @@ weeks=c('2010-04-04', '2010-04-11', '2010-04-18', '2010-04-25')
 par(oma=c(1,1,2,1))
 
 plot3Weeks(weeks, 'absolute')
+dev.off()
+
+
+pdf("results/color_pace_1week.pdf", 10, 3)
+weeks=c('2010-04-04', '2010-04-11')
+par(oma=c(1,1,2,1))
+plot1Week(weeks, 'absolute')
 dev.off()
 
