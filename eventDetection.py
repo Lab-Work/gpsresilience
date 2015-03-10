@@ -12,7 +12,7 @@ from tools import *
 from datetime import datetime, timedelta
 from Queue import PriorityQueue
 from math import sqrt
-
+from measureOutliers import readGlobalPace, getExpectedPace
 from collections import defaultdict
 
 #The input files
@@ -368,43 +368,7 @@ def computeEventProperties(start_key, end_key, global_pace_timeseries, expected_
 	return [start_date, end_date, duration, max_pace_dev, min_pace_dev, TRIP_NAMES[max_votes_id]]
 	
 	
-#Given a pace timeseries, compute the expected value for each timeslice (based on the weekly periodic pattern)
-#This is a leave-one-out estimate (e.g. The expected pace for Friday, January 1st at 8am is the average of all Fridays at 8am EXCEPT for Friday January 1st)
-#Arguments:
-	#global_pace_timeseries - see likelihood_test_parallel.readGlobalPace()
-#Returns:
-	#A tuple (expected_pace_timeseries, sd_pace_timeseries).  Breakdown:
-		#expected_pace_timeseries - A dictionary keyed by (date, hour, weekday) which contains expected paces for each hour of the timeseries
-		#expected_pace_timeseries - A dictionary keyed by (date, hour, weekday) which contains the standard deviation of paces at that hour of the time series
-def getExpectedPace(global_pace_timeseries):
-	#First computed grouped counts, sums, and sums of squares
-	#Note that these are leave-one-IN estimates.  This will be converted to leave-one-out in the next step
-	grouped_sum = defaultdict(float)
-	grouped_ss = defaultdict(float)	
-	grouped_count = defaultdict(float)
-	#Iterate through all days, updating the corresponding sums
-	for (date, hour, weekday) in global_pace_timeseries:
-		grouped_sum[weekday, hour] += global_pace_timeseries[date,hour,weekday]
-		grouped_ss[weekday, hour] += global_pace_timeseries[date,hour,weekday] ** 2
-		
-		grouped_count[weekday, hour] += 1
-	
-	expected_pace_timeseries = {}
-	sd_pace_timeseries = {}
-	#Now that the grouped stats are computed, iterate through the timeseries again
-	for (date, hour, weekday) in global_pace_timeseries:
-		#The updated count, sum, and sum of squares are computed by subtracting the observation at hand
-		#i.e. a leave-one-out estimate
-		updated_sum = grouped_sum[weekday, hour] - global_pace_timeseries[date, hour, weekday]
-		updated_ss = grouped_ss[weekday, hour] - global_pace_timeseries[date, hour, weekday] ** 2
-		updated_count = grouped_count[weekday, hour] - 1
-		
-		#Compute the average and standard deviation from these sums
-		expected_pace_timeseries[date, hour, weekday] = updated_sum / updated_count
-		sd_pace_timeseries[date, hour, weekday] = sqrt((updated_ss / updated_count) - expected_pace_timeseries[date, hour, weekday] ** 2)
-	
-	#Return the computed time series dictionaries
-	return (expected_pace_timeseries, sd_pace_timeseries)
+
 		
 
 

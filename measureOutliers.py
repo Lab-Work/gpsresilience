@@ -11,7 +11,6 @@ from collections import defaultdict
 from multiprocessing import Pool
 
 from mahalanobis import *
-from eventDetection import *
 from traffic_estimation.plot_estimates import make_video, build_speed_dicts
 from lof import *
 from tools import *
@@ -105,6 +104,47 @@ def readGlobalPace(dirName):
         pace_timeseries[(date, hour, weekday)] = pace
 
     return pace_timeseries
+    
+    
+    
+#Given a pace timeseries, compute the expected value for each timeslice (based on the weekly periodic pattern)
+#This is a leave-one-out estimate (e.g. The expected pace for Friday, January 1st at 8am is the average of all Fridays at 8am EXCEPT for Friday January 1st)
+#Arguments:
+	#global_pace_timeseries - see likelihood_test_parallel.readGlobalPace()
+#Returns:
+	#A tuple (expected_pace_timeseries, sd_pace_timeseries).  Breakdown:
+		#expected_pace_timeseries - A dictionary keyed by (date, hour, weekday) which contains expected paces for each hour of the timeseries
+		#expected_pace_timeseries - A dictionary keyed by (date, hour, weekday) which contains the standard deviation of paces at that hour of the time series
+def getExpectedPace(global_pace_timeseries):
+	#First computed grouped counts, sums, and sums of squares
+	#Note that these are leave-one-IN estimates.  This will be converted to leave-one-out in the next step
+	grouped_sum = defaultdict(float)
+	grouped_ss = defaultdict(float)	
+	grouped_count = defaultdict(float)
+	#Iterate through all days, updating the corresponding sums
+	for (date, hour, weekday) in global_pace_timeseries:
+		grouped_sum[weekday, hour] += global_pace_timeseries[date,hour,weekday]
+		grouped_ss[weekday, hour] += global_pace_timeseries[date,hour,weekday] ** 2
+		
+		grouped_count[weekday, hour] += 1
+	
+	expected_pace_timeseries = {}
+	sd_pace_timeseries = {}
+	#Now that the grouped stats are computed, iterate through the timeseries again
+	for (date, hour, weekday) in global_pace_timeseries:
+		#The updated count, sum, and sum of squares are computed by subtracting the observation at hand
+		#i.e. a leave-one-out estimate
+		updated_sum = grouped_sum[weekday, hour] - global_pace_timeseries[date, hour, weekday]
+		updated_ss = grouped_ss[weekday, hour] - global_pace_timeseries[date, hour, weekday] ** 2
+		updated_count = grouped_count[weekday, hour] - 1
+		
+		#Compute the average and standard deviation from these sums
+		expected_pace_timeseries[date, hour, weekday] = updated_sum / updated_count
+		sd_pace_timeseries[date, hour, weekday] = sqrt((updated_ss / updated_count) - expected_pace_timeseries[date, hour, weekday] ** 2)
+	
+	#Return the computed time series dictionaries
+	return (expected_pace_timeseries, sd_pace_timeseries)    
+    
     
 #Computes the outlier scores for all of the mean pace vectors in a given weekday/hour pair (for example Wednesdays at 3pm)
 #Many of these can be run in parallel
