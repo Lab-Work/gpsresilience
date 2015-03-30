@@ -186,8 +186,7 @@ def extractFeatures(road_map, output_dir, pool):
     
 
 if(__name__=="__main__"):
-    #pool = Pool(NUM_PROCESSORS) #Initialize the pool
-    pool = DefaultPool()    
+    pool = Pool(NUM_PROCESSORS) #Initialize the pool
     imb_vals = [20]
     k_vals = [4,10]
     for imb in imb_vals:        
