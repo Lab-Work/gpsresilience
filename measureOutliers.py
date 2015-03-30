@@ -266,7 +266,7 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=50,
     
     #Iterator breaks the data into groups
     gIter = groupIterator(pace_grouped, weights_grouped, dates_grouped,
-                          diag=use_link_db, normalize=normalize)
+                          diag=True, normalize=normalize)
                           
     
     outputList = pool.map(processGroup, gIter) #Run all of the groups, using as much parallel computing as possible
@@ -323,13 +323,16 @@ if(__name__=="__main__"):
     #logMsg("Running raw analysis")
     #generateTimeSeriesLeave1("4year_features", use_link_db=True)
     
+    generateTimeSeriesLeave1("4year_features", use_link_db=False, normalize=False)
+    
+    
     """
     logMsg("Running normalized analysis")
     generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True)
     
     logMsg("Running weighted analysis")
     generateTimeSeriesLeave1("4year_features", use_link_db=True, use_feature_weights=True, normalize=True)
-    """
+
     
     logMsg("Running normalized analysis")
     generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True, consistent_threshold=20)
@@ -342,4 +345,5 @@ if(__name__=="__main__"):
     
     logMsg("Running weighted analysis")
     generateTimeSeriesLeave1("4year_features", use_link_db=True, use_feature_weights=True, normalize=True, consistent_threshold=300)
+    """
 

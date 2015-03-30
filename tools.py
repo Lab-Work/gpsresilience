@@ -188,6 +188,31 @@ def getQuantile(sortedVals, quant):
 
 	return val
 
+
+
+def binarySearch(sortedVals, start, end, testVal):
+	
+	if(testVal <= sortedVals[start]):
+		return start
+	
+	if(testVal >= sortedVals[end-1]):
+		return end-1
+	
+	m = int((start + end)/2)
+	
+	if(testVal < sortedVals[m]):
+		return binarySearch(sortedVals, start, m, testVal)
+	else:
+		return binarySearch(sortedVals, m, end, testVal)
+
+
+def findQuantile(sortedVals, testVal):
+	i = binarySearch(sortedVals, 0, len(sortedVals), testVal)
+	
+	q = (float(i) + .5)/len(sortedVals)
+	return q
+
+
 #Performs addition in log-space without underflow error
 #Formally, returns:  log(e^v1 + e^v2 + e^v3 + ...)
 #See: http://stackoverflow.com/questions/9336701/how-to-deal-with-underflow-in-scientific-computing

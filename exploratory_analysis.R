@@ -1,9 +1,10 @@
 t = read.csv("results/link_50_normalize_zscore.csv")
+
 t$Date = as.character(t$Date)
 
 #smallz = t[18067:(18067+168*40) , 4:ncol(t)]
 smallz = t[t$Date>='2012-10-21' & t$Date < '2012-11-11',4:ncol(t)]
-
+smallzd = t[t$Date>='2012-10-21' & t$Date < '2012-11-11',]
 
 out = read.csv("results/link_50_normalize_outlier_scores.csv")
 out$date = as.character(out$date)
@@ -41,6 +42,21 @@ plot(smallold$mahal, type="l")
 
 
 dev.off()
+
+
+pdf("zscore_hists.pdf", 20, 10)
+print(paste("Making", nrow(smallz)))
+for(i in 1:nrow(smallz)){
+	title = paste(smallzd$Date[i], smallzd$Hour[i], ":", sum(smallz[i,] !=0))
+	print(title)
+	truncated = pmax(pmin(as.numeric(smallz[i,]), 5), -5)
+	truncated = truncated[truncated!=0]
+	hist(truncated, main=title, breaks=seq(-5,5,.2), xlim=c(-5,5))
+}
+
+dev.off()
+
+
 
 
 

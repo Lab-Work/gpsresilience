@@ -9,7 +9,6 @@ Created on Sat May  3 12:33:42 2014
 """
 
 from datetime import date, datetime, timedelta
-from pandas import to_datetime
 from sets import Set
 import csv
 import os

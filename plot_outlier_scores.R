@@ -124,31 +124,37 @@ addPacePlot = function(s){
 	#t - the original full table
 	#title - the main title for the plot
 	#type - either "full" corresponding to full gaussian likelihood, or "kern" corresponding to kernel density estimate
-addOutlierPlot = function(s, t, title, type="mahal"){
+addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 
 
 	#Depending on the type of outlier score, extract the right column
 	if(type=="mahal"){
-		s_lnl = s$mahal
-		t_lnl = t$mahal
+		s1_lnl = s1$mahal
+		t1_lnl = t1$mahal
+		s2_lnl = s2$mahal
+		t2_lnl = t2$mahal
 	}
 	else if(type=="lof"){
-		s_lnl = s$lof20
-		t_lnl = t$lof20
+		s1_lnl = s1$lof20
+		t1_lnl = t1$lof20
+		s2_lnl = s2$lof20
+		t2_lnl = t2$lof20
 	}
 	
 	#Create the plot of the outlier scores
-	plot(s_lnl, col="black", type="l", main=title, ylim = quantile(s_lnl, c(.002,1)), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=2)
+	#plot(s1_lnl, col="black", type="l", main=title, ylim = quantile(s1_lnl, c(.002,1)), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	plot(s1_lnl, col="black", type="l", main=title, ylim = c(0,8), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	lines(s2_lnl, col="blue", type="l", lwd=1)
 
 	#Use a 5% quantile on the values from the ORIGINAL data to determine the threshold
 	#Draw a horizontal line for the threshold
-	abline(h=quantile(t_lnl, .95), col="red", lwd=2)
-	
+	#abline(h=quantile(t1_lnl, c(.90, .95, .99)), col="black", lty=2)
+	#abline(h=quantile(t2_lnl, c(.90,.95, .99)), col="blue", lty=2)
 	  
 
 	#Add dates as x-axis labels
 	ids = (0:20) * 24 + 1
-	short_dates = shortenDates(s$date)
+	short_dates = shortenDates(s1$date)
 	axis(1, at=ids, labels=short_dates[ids], cex.axis=.75)
 	  
 	  
@@ -158,8 +164,10 @@ addOutlierPlot = function(s, t, title, type="mahal"){
 	abline(v=ids2, lwd=3)
 
 	#Add the legend
-	legend("topright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
-		  lwd=c(2,2), bg="white")
+	#legend("topright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
+	#	  lwd=c(2,2), bg="white")
+
+	legend("topright", legend=c("Coarse", "Fine"), col=c("black", "blue"), lwd=2, bg="white")
 }
 
 
@@ -181,26 +189,36 @@ addOutlierPlot = function(s, t, title, type="mahal"){
 makeplot = function(startDate, endDate, inFile, outFile, title){
 
 	#Read table from file and select the desired subset
-	t = read.csv(inFile)
-	t$date = as.character(t$date)
-	s = t[t$date>=startDate & t$date<=endDate,]
+	t1 = read.csv("results/outlier_scores.csv")
+	t1$date = as.character(t1$date)
+	t1$mahal = t1$mahal / 4.0
+	s1 = t1[t1$date>=startDate & t1$date<=endDate,]
 
 
-	#Create PDF  
+	t2 = read.csv("results/link_20_normalize_outlier_scores.csv")
+	t2$date = as.character(t2$date)
+	s2 = t2[t2$date>=startDate & t2$date<=endDate,]
+
+
+
+	#Create PDF  file
 	print(paste("Creating", outFile))
-	pdf(outFile, 12, 8)
+	if(outFile!='[IGNORE]'){
+		pdf(outFile, 12, 8)
+	}
 	par(mfrow=c(2,1), mar=c(3,5,2,1))
 
   
 
 	#Add the probability plot	
-	addOutlierPlot(s, t, title)
+	addOutlierPlot(s1, t1, s2, t2, title)
  
 	#Add the pace plot
-	addPacePlot(s)
+	addPacePlot(s1)
 
-
-  dev.off()
+	if(outFile!='[IGNORE]'){
+  		dev.off()
+	}
 }
 
 
@@ -330,24 +348,6 @@ makeThrashingPlot = function(startDate, endDate, inFile, events1, events2, outFi
 
 
 
-#makeLofPlot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/event_Sandy_lofs.pdf", "Event Detection")
-
-
-#Make probability plots for several interesting events
-
-makeplot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/event_Sandy_mahal.pdf", "Event Detection")
-makeplot("2010-12-20", "2011-01-09", "results/outlier_scores.csv", "results/event_Blizzard_mahal.pdf", "Event Detection")
-makeplot("2011-08-21", "2011-09-11", "results/outlier_scores.csv", "results/event_Irene_mahal.pdf", "Event Detection")
-makeplot("2013-02-03", "2013-02-24", "results/outlier_scores.csv", "results/event_Blizzard2_mahal.pdf", "Event Detection")
-makeplot("2010-02-21", "2010-03-14", "results/outlier_scores.csv", "results/event_Blizzard3_mahal.pdf", "Event Detection")
-makeplot("2013-10-06", "2013-10-27", "results/outlier_scores.csv", "results/event_October_mahal.pdf", "Event Detection")
-
-
-#Make a plot to demonstrate thrashing
-#makeThrashingPlot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/events_nomerge.csv", "results/events_sorted.csv", "results/thrashing.pdf")	
-
-
-
 plotGroup = function(prefix){
 	makeplot("2012-10-21", "2012-11-11", sprintf("results/%s_outlier_scores.csv", prefix), sprintf("results/event_%s_Sandy_mahal.pdf", prefix), "Event Detection")
 	makeplot("2010-12-20", "2011-01-09", sprintf("results/%s_outlier_scores.csv", prefix), sprintf("results/event_%s_Blizzard_mahal.pdf", prefix), "Event Detection")
@@ -357,11 +357,57 @@ plotGroup = function(prefix){
 	makeplot("2013-10-06", "2013-10-27", sprintf("results/%s_outlier_scores.csv", prefix), sprintf("results/event_%s_October_mahal.pdf", prefix), "Event Detection")
 }
 
-plotGroup("link_20_normalize")
-plotGroup("link_20_weighted_normalize")
-plotGroup("link_50_normalize")
-plotGroup("link_50_weighted_normalize")
-plotGroup("link_300_normalize")
-plotGroup("link_300_weighted_normalize")
+
+dateToRange = function(dateStr){
+	dt = strptime(dateStr, format="%Y-%m-%d %H:%M:%S")
+	dt = strftime(dt, format="%Y-%m-%d")
+	dt = strptime(dt, format="%Y-%m-%d")
+	start = dt - 60*60*24*7
+	end = dt + 60*60*24*14
+	return(as.character(c(start,end)))
+}
+
+
+
+#makeLofPlot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/event_Sandy_lofs.pdf", "Event Detection")
+
+
+#Make probability plots for several interesting events
+if(F){
+makeplot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/event_Sandy_mahal.pdf", "Event Detection")
+makeplot("2010-12-20", "2011-01-09", "results/outlier_scores.csv", "results/event_Blizzard_mahal.pdf", "Event Detection")
+makeplot("2011-08-21", "2011-09-11", "results/outlier_scores.csv", "results/event_Irene_mahal.pdf", "Event Detection")
+makeplot("2013-02-03", "2013-02-24", "results/outlier_scores.csv", "results/event_Blizzard2_mahal.pdf", "Event Detection")
+makeplot("2010-02-21", "2010-03-14", "results/outlier_scores.csv", "results/event_Blizzard3_mahal.pdf", "Event Detection")
+makeplot("2013-10-06", "2013-10-27", "results/outlier_scores.csv", "results/event_October_mahal.pdf", "Event Detection")
+}
+
+#Make a plot to demonstrate thrashing
+#makeThrashingPlot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/events_nomerge.csv", "results/events_sorted.csv", "results/thrashing.pdf")	
+
+
+
+if(F){
+	plotGroup("link_20_normalize")
+	plotGroup("link_20_weighted_normalize")
+	plotGroup("link_50_normalize")
+	plotGroup("link_50_weighted_normalize")
+	plotGroup("link_300_normalize")
+	plotGroup("link_300_weighted_normalize")
+}
+
+
+if(T){
+	t = read.csv("results/link_20_normalize_events_windowed.csv")
+	pdf("results/lots_of_events.pdf")
+	for(i in 1:20){
+		rng = dateToRange(t$start_date[i])
+		print(rng)
+		makeplot(rng[1],rng[2], "blah", "[IGNORE]", "Event Detection")
+	}
+	dev.off()
+}
+
+
 
 
