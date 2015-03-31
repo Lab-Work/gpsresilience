@@ -18,7 +18,6 @@ import traceback
 from grid import *
 from regions import *
 from trip import *
-from tools import DefaultPool
 
 
 #Global settings
@@ -177,7 +176,7 @@ def extractFeatures(road_map, output_dir, pool):
     
     #Merge intermediate results into large files in one final output folder
     logMsg("Merging output files")
-    mergeTempFiles(slice_dirs, FINAL_OUTPUT_DIR)
+    mergeTempFiles(slice_dirs, output_dir)
     
     logMsg("Cleaning up")
     shutil.rmtree(TMP_DIR, ignore_errors=True)    
