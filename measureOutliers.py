@@ -10,6 +10,7 @@ import os, csv
 from collections import defaultdict
 from multiprocessing import Pool
 
+from data_preprocessing import preprocess_data
 from mahalanobis import *
 from traffic_estimation.plot_estimates import make_video, build_speed_dicts
 from lof import *
@@ -255,6 +256,7 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=50,
     else:
         file_prefix = "coarse_"
         (pace_timeseries, pace_grouped, dates_grouped, trip_names) = readPaceData(inDir)
+        pace_grouped = preprocess_data(pace_grouped, 5)
         weights_grouped = None
 
     #Also get global pace information
@@ -323,7 +325,7 @@ if(__name__=="__main__"):
     #logMsg("Running raw analysis")
     #generateTimeSeriesLeave1("4year_features", use_link_db=True)
     
-    generateTimeSeriesLeave1("4year_features", use_link_db=False, normalize=False)
+    generateTimeSeriesLeave1("features_imb20_k10", use_link_db=False, normalize=False)
     
     
     """
