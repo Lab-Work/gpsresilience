@@ -171,7 +171,7 @@ def reduceOutlierScores(scores, sorted_keys, dates_grouped):
 def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_pcs=10,
                                     gamma=.5, perc_missing_allowed=.05, make_zscore_vid=False):
                                  
-    pool = Pool(8) #Prepare for parallel processing
+    pool = Pool(16) #Prepare for parallel processing
     #pool = DefaultPool()
 
     numpy.set_printoptions(linewidth=1000, precision=4)
@@ -282,9 +282,9 @@ if(__name__=="__main__"):
     #generateTimeSeriesLeave1("features_imb20_k10", use_link_db=False, num_pcs=3, perc_missing_allowed=.05)
         
     
-    
-    for gamma in [.3,.4,.5,.6,.7,.8,.9,1]:
-        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=True, robust=True, num_pcs=200,
+
+    for gamma in [.2,.3,.4,.5,.6,.7,.8,.9,1]:
+        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=True, robust=True, num_pcs=10,
                                         gamma=gamma, perc_missing_allowed=.05, make_zscore_vid=False)
     
     """

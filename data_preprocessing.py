@@ -119,7 +119,7 @@ def impute_missing_data(data_matrix):
         # from this matrix, and then APPLIED to data_matrix
 # Returns:
     # new_matrix - a new scaled matrix of the same size
-def scale_and_center(data_matrix, reference_matrix=None):
+def scale_and_center(data_matrix, reference_matrix=None, scale=False):
     
     if(reference_matrix==None):
         reference_matrix = data_matrix
@@ -135,9 +135,10 @@ def scale_and_center(data_matrix, reference_matrix=None):
     # Also scale each variable by its standard deviation, if desired    
         # Var[X] = sum( (X - mean_x)^2) / N
         # Var[X] = sum( (X - 0)^2) / N  # since we already subtracted the mean
-    sums_of_squares = square(reference_matrix).sum(axis=1)
-    row_sds = sqrt(sums_of_squares / n_obs)
-    new_matrix /= row_sds
+    if(scale):
+        sums_of_squares = square(reference_matrix).sum(axis=1)
+        row_sds = sqrt(sums_of_squares / n_obs)
+        new_matrix /= row_sds
     
     return new_matrix
 
@@ -168,8 +169,14 @@ def pca(data_matrix, n_pcs):
 	
     # compute the spectral decomposition
     eig_vals, eig_vectors = sorted_eig(cov_matrix)
-    print eig_vals.tolist()
-    print ("Nonzero eigvals: %d" % sum(eig_vals > 0))    
+    rank = sum(eig_vals > .0001)
+    print ("Nonzero eigvals: %d" % rank)
+    trunc_eigs = eig_vals.tolist()[:(rank+5)]
+    print "Eigen vals: " + str(trunc_eigs)
+    eig_ratios = [trunc_eigs[i] / trunc_eigs[i+1] for i in range(len(trunc_eigs)-1)]
+    print "Eigen ratios: " + str(eig_ratios)
+    print
+    
     
     eig_vectors = matrix(eig_vectors)
     principal_components = real(eig_vectors[:,:n_pcs])
