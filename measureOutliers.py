@@ -5,18 +5,19 @@ Created on Wed Sep 24 12:34:53 2014
 @author: brian
 """
 import numpy
-from numpy import matrix, transpose
+from numpy import matrix, transpose, zeros
 import os, csv
 from collections import defaultdict
 from multiprocessing import Pool
+from functools import partial
 
-from data_preprocessing import preprocess_data
+from data_preprocessing import preprocess_data, remove_bad_dimensions_grouped
 from mahalanobis import *
 from traffic_estimation.plot_estimates import make_video, build_speed_dicts
 from lof import *
 from tools import *
 
-from measureLinkOutliers import load_pace_data
+from measureLinkOutliers import load_pace_data, load_from_file
 
 NUM_PROCESSORS = 8
 
@@ -147,93 +148,30 @@ def getExpectedPace(global_pace_timeseries):
 	return (expected_pace_timeseries, sd_pace_timeseries)    
     
     
-#Computes the outlier scores for all of the mean pace vectors in a given weekday/hour pair (for example Wednesdays at 3pm)
-#Many of these can be run in parallel
-#params:
-    #A tuple (paceGroup, dateGroup, hour, weekday) - see groupIterator()
-#returns:
-    #A list of tuples, each of which contain various types of outlier scores for each date
-def processGroup((paceGroup, weightGroup, dateGroup, hour, weekday, diag, normalize)):
-    #logMsg("Processing " + weekday + " " + str(hour))
     
-    #Compute mahalanobis outlier scores
-    (mahals, group_zscores) = computeMahalanobisDistances(paceGroup, independent=diag,
-                                                        group_of_weights=weightGroup,
-                                                        normalize=normalize)
+def reduceOutlierScores(scores, sorted_keys, dates_grouped):
+    #weekday_strs = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    #mahals - list of lists
+    # dates_grouped - dict of lists
     
-    #compute local outlier factors with various k parameters
-    lofs1 = getLocalOutlierFactors(paceGroup, 1)
-    lofs3 = getLocalOutlierFactors(paceGroup, 3)
-    lofs5 = getLocalOutlierFactors(paceGroup, 5)
-    lofs10 = getLocalOutlierFactors(paceGroup, 10)
-    lofs20 = getLocalOutlierFactors(paceGroup, 20)
-    lofs30 = getLocalOutlierFactors(paceGroup, 30)
-    lofs50 = getLocalOutlierFactors(paceGroup, 50)
+    all_entries = []
+    for i in xrange(len(sorted_keys)):
+        this_hour, this_weekday = sorted_keys[i]
+        mahals, c_vals = scores[i]
+        for j in xrange(len(mahals)):
+            this_date = dates_grouped[sorted_keys[i]][j]
+            entry = (this_date, this_hour, this_weekday, mahals[j], c_vals[j])
+            all_entries.append(entry)
+    
+    all_entries.sort()
+    return all_entries
 
-    #A dictionary which maps (date, hour, weekday), to an entry
-    #An entry is a tuple that contains various types of outlier scores
-    scores = {}
-    #Here, each entry is the zscored vector
-    zscores = {}
-    for i in range(len(paceGroup)):
-        entry = (mahals[i], lofs1[i], lofs3[i], lofs5[i], lofs10[i], lofs20[i], lofs30[i], lofs50[i])
-        scores[dateGroup[i], hour, weekday] = entry
-        
-        zscores[dateGroup[i], hour, weekday] = group_zscores[i]
-    #Return the scores
-    return (scores, zscores)
-
-#An iterator which supplies inputs to processGroup()
-#Each input contains a set of mean pace vectors, and some extra time info
-#params:
-    #pace_grouped - Lists of vectors, indexed by weekday/hour pair - see readPaceData()
-    #date_grouped - Date strings, indexd by weekday/hour pair - see readPaceData()
-def groupIterator(pace_grouped, weights_grouped, dates_grouped, diag=False, normalize=False):
-    #Iterate through weekday/hour pairs
-    for (weekday, hour) in pace_grouped:
-        #Grab the list of vectors
-        paceGroup = pace_grouped[weekday, hour]
-        #grab the list of dates
-        dateGroup = dates_grouped[weekday, hour]
-        
-        if(weights_grouped is None):
-            weightGroup = None
-        else:
-            weightGroup = weights_grouped[weekday, hour]
-            
-        #Each output contains these lists, as well as the hour and day of week
-        yield (paceGroup, weightGroup, dateGroup, hour, weekday, diag, normalize)
-
-#Merges many group scores - see the output of processGroup() - into one
-#params:
-    #outputList - a list of (score, zscore) tuples
-    #Each element of the list is an output of processGroup()
-#return:
-    #scores - a dictionary that maps date/hour pairs to entries
-    #zscores - a dictionary that maps date/hour pairs to zscores
-def reduceOutputs(outputList):
-    scores = {}
-    zscores = {}
-    for (score, zscore) in outputList:
-        scores.update(score)
-        zscores.update(zscore)
-        
-    return (scores, zscores)
     
 
-#Generates time-series log-likelihood values
-#Similar to generateTimeSeries(), but LEAVES OUT the current observation when computing the probability
-#These describe how likely or unlikely the state of the city is, given the distribution of "similar"
-# days (same hour and day of week) but not today.
-#Params:
-    #inDir - the directory which contains the time-series feature files (CSV format)
-    #use_link_db - if True, will use link-by-link travel times from the DB.
-        # If False, will use aggregated info from OD region pairs
-    #returns - no return value, but saves files into results/...
-def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=50, 
-                             use_feature_weights=False, normalize=False, make_zscore_vid=False):
-    
-    pool = Pool(NUM_PROCESSORS) #Prepare for parallel processing
+def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_pcs=10,
+                                    gamma=.5, perc_missing_allowed=.05, make_zscore_vid=False):
+                                 
+    pool = Pool(8) #Prepare for parallel processing
     #pool = DefaultPool()
 
     numpy.set_printoptions(linewidth=1000, precision=4)
@@ -241,66 +179,81 @@ def generateTimeSeriesLeave1(inDir, use_link_db=False, consistent_threshold=50,
     #Read the time-series data from the file
     logMsg("Reading files...")
     if(use_link_db):
-        file_prefix = "link_%d_" % consistent_threshold
-        if(use_feature_weights):
-            file_prefix += "weighted_"
+        file_prefix = "link_"
         
-        if(normalize):
-            file_prefix += "normalize_"
+        #pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names, consistent_link_set = load_pace_data(
+        #    num_trips_threshold=consistent_threshold, pool=pool)
         
-        pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names, consistent_link_set = load_pace_data(
-            num_trips_threshold=consistent_threshold, pool=pool)
-            
-        if(use_feature_weights==False):
-            weights_grouped = None
+        pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names, consistent_link_set = load_from_file('tmp_vectors.pickle')
+
+
     else:
         file_prefix = "coarse_"
         (pace_timeseries, pace_grouped, dates_grouped, trip_names) = readPaceData(inDir)
-        pace_grouped = preprocess_data(pace_grouped, 5)
-        weights_grouped = None
+
+
+    if(robust):
+        robustStr = "RPCA%d" % int(gamma*100)
+    else:
+        robustStr = "PCA"
+
+    file_prefix += "%s_%s_%dpcs_%dpercmiss" % (inDir, robustStr, num_pcs, perc_missing_allowed*100)
+
+    #pace_grouped = preprocess_data(pace_grouped, num_pcs,
+    #                               perc_missing_allowed=perc_missing_allowed)
+    pace_grouped = remove_bad_dimensions_grouped(pace_grouped, perc_missing_allowed)
+
+
 
     #Also get global pace information
     global_pace_timeseries = readGlobalPace(inDir)
     (expected_pace_timeseries, sd_pace_timeseries) = getExpectedPace(global_pace_timeseries)
 
     logMsg("Starting processes")
+    logMsg("Doing RPCA with gamma=%f, k=%d" % (gamma, num_pcs))
 
+    # Freeze the parameters of the computeMahalanobisDistances() function
+    mahalFunc = partial(computeMahalanobisDistances, robust=robust, k=num_pcs,
+                        gamma=gamma)
     
-    #Iterator breaks the data into groups
-    gIter = groupIterator(pace_grouped, weights_grouped, dates_grouped,
-                          diag=True, normalize=normalize)
-                          
-    
-    outputList = pool.map(processGroup, gIter) #Run all of the groups, using as much parallel computing as possible
+    # Compute all mahalanobis distances
+    sorted_keys = sorted(pace_grouped)    
+    groups = [pace_grouped[key] for key in sorted_keys]    
+    outlier_scores = pool.map(mahalFunc, groups) #Run all of the groups, using as much parallel computing as possible
 
     logMsg("Merging output")
     #Merge outputs from all of the threads
-    (outlierScores, zscores) = reduceOutputs(outputList)
+    entries = reduceOutlierScores(outlier_scores, sorted_keys, dates_grouped)
 
     
     logMsg("Writing file")
     #Output outlier scores to file
-    scoreWriter = csv.writer(open("results/%soutlier_scores.csv"%file_prefix, "w"))
-    scoreWriter.writerow(['date','hour','weekday', 'mahal', 'lof1', 'lof3', 'lof5', 'lof10', 'lof20', 'lof30', 'lof50' ,'global_pace', 'expected_pace', 'sd_pace'])
+    scoreWriter = csv.writer(open("results/%s_robust_outlier_scores.csv"%file_prefix, "w"))
+    scoreWriter.writerow(['date','hour','weekday', 'mahal' ,'c_val','global_pace', 'expected_pace', 'sd_pace'])
     
 
-    for (date, hour, weekday) in sorted(outlierScores):
-        gl_pace = global_pace_timeseries[(date, hour, weekday)]
-        exp_pace = expected_pace_timeseries[(date, hour, weekday)]
-        sd_pace = sd_pace_timeseries[(date, hour, weekday)]
+    for (date, hour, weekday, mahal, c_val) in sorted(entries):
+        try:
+            gl_pace = global_pace_timeseries[(date, hour, weekday)]
+            exp_pace = expected_pace_timeseries[(date, hour, weekday)]
+            sd_pace = sd_pace_timeseries[(date, hour, weekday)]
+        except:
+            gl_pace = 0
+            exp_pace = 0
+            sd_pace = 0
         
-        (scores) = outlierScores[date, hour, weekday]
-        
-        scoreWriter.writerow([date, hour, weekday] + list(scores) + [gl_pace, exp_pace, sd_pace])
+        scoreWriter.writerow([date, hour, weekday, mahal, c_val, gl_pace, exp_pace, sd_pace])
 
 
+    """
     zscoreWriter= csv.writer(open("results/%szscore.csv"%file_prefix, "w"))
     zscoreWriter.writerow(['Date','Hour','Weekday'] + trip_names)
     #Output zscores to file
     for (date, hour, weekday) in sorted(zscores):
         std_vect = zscores[date, hour, weekday]
         zscoreWriter.writerow([date, hour, weekday] + ravel(std_vect).tolist())
-
+    """
+    
 
     #def make_video(tmp_folder, filename_base, pool=DefaultPool(), dates=None, speed_dicts=None)
     if(make_zscore_vid):
@@ -325,8 +278,14 @@ if(__name__=="__main__"):
     #logMsg("Running raw analysis")
     #generateTimeSeriesLeave1("4year_features", use_link_db=True)
     
-    generateTimeSeriesLeave1("features_imb20_k10", use_link_db=False, normalize=False)
     
+    #generateTimeSeriesLeave1("features_imb20_k10", use_link_db=False, num_pcs=3, perc_missing_allowed=.05)
+        
+    
+    
+    for gamma in [.3,.4,.5,.6,.7,.8,.9,1]:
+        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=True, robust=True, num_pcs=200,
+                                        gamma=gamma, perc_missing_allowed=.05, make_zscore_vid=False)
     
     """
     logMsg("Running normalized analysis")

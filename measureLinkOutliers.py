@@ -12,6 +12,7 @@ from numpy import matrix, zeros
 from routing.Map import Map
 from tools import DefaultPool, splitList, logMsg, dateRange
 from datetime import datetime
+import cPickle as pickle
 
 from collections import defaultdict
 from functools import partial
@@ -205,7 +206,15 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
                 trip_names, consistent_link_set)
 
 
-
+def load_from_file(pickle_filename):
+    with open(pickle_filename, 'r') as f:
+        data = pickle.load(f)
+    
+    (pace_timeseries, pace_grouped, weights_grouped, dates_grouped,
+                trip_names, consistent_link_set) = data
+    return (pace_timeseries, pace_grouped, weights_grouped, dates_grouped,
+                trip_names, consistent_link_set)
+        
 
 
 

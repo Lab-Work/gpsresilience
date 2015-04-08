@@ -4,16 +4,18 @@ Created on Tue Mar 31 17:23:32 2015
 
 @author: Brian Donovan (briandonovan100@gmail.com)
 """
-from numpy import ravel, where, matrix, square, sqrt, cov, real, transpose
-from numpy import column_stack
+from numpy import ravel, where, matrix, square, sqrt, cov, real, transpose, sum
+from numpy import column_stack, zeros
 
 from numpy.random import rand as rand_array
-from numpy.linalg import inv, eig
+from numpy.linalg import inv, eigh, qr
 import numpy as np
 
 from functools import partial
-
 from tools import DefaultPool
+
+
+
 
 # Deletes dimensions from a data matrix that have too much missing data.
 # Params:
@@ -36,7 +38,6 @@ def remove_bad_dimensions(data_matrix, perc_missing_allowed=.01):
     num_missing = ((data_matrix==0).sum(axis=1) - num_all_missing)
     perc_missing = num_missing.astype(float) / (n_obs - num_all_missing)
     
-    print perc_missing
     
     # Select only dimensions that have a low enough percentage
     good_dims = ravel(perc_missing < perc_missing_allowed)
@@ -108,36 +109,44 @@ def impute_missing_data(data_matrix):
 
 
 
-# Scales and centers a data matrix in-place.  Specifically, it subtracts the mean
+# Scales and centers a data matrix.  Specifically, it subtracts the mean
 # observation from all observations, and divides all variables by their standard
-# deviation (if desired)
+# deviation
 # Params:
     # data_matrix - a Numpy matrix that contains the data - the columns of this
         # matrix are individual observations, and the rows are variables (i.e. dimensions)
-    # scale - set to True if scaling and centering are desired, False if only 
-        # centering is desired
-def scale_and_center(data_matrix, scale=True):
+    # reference_matrix - If provided, the mean and standard deviation will be computed
+        # from this matrix, and then APPLIED to data_matrix
+# Returns:
+    # new_matrix - a new scaled matrix of the same size
+def scale_and_center(data_matrix, reference_matrix=None):
+    
+    if(reference_matrix==None):
+        reference_matrix = data_matrix
     # First compute the average observation (column vector) and subtract from
     # every other observation.
     (n_vars, n_obs) = data_matrix.shape
-    row_sums = data_matrix.sum(axis=1)
+    
+    
+    row_sums = reference_matrix.sum(axis=1)
     row_avgs = row_sums / n_obs
-    data_matrix -= row_avgs
-
+    new_matrix = data_matrix - row_avgs
+    
     # Also scale each variable by its standard deviation, if desired    
-    if(scale):
         # Var[X] = sum( (X - mean_x)^2) / N
         # Var[X] = sum( (X - 0)^2) / N  # since we already subtracted the mean
-        sums_of_squares = square(data_matrix).sum(axis=1)
-        row_sds = sqrt(sums_of_squares / n_obs)
-        data_matrix /= row_sds
+    sums_of_squares = square(reference_matrix).sum(axis=1)
+    row_sds = sqrt(sums_of_squares / n_obs)
+    new_matrix /= row_sds
+    
+    return new_matrix
 
 
 # A helper method that computes eigenvectors / eigenvalues of a matrix, and then
 # sorts them in descending order (The default eig function in Numpy does not
 # guarantee that they will be in any particular order)
 def sorted_eig(m):
-    evals, evects = eig(m)
+    evals, evects = eigh(m)
     sort_order = evals.argsort()[::-1]
     evals = np.sort(evals)[::-1]
     evects = evects[:,sort_order]
@@ -151,11 +160,17 @@ def sorted_eig(m):
         # matrix are individual observations, and the rows are variables (i.e. dimensions)
     # n_pcs - the deisred number of Principal components
 def pca(data_matrix, n_pcs):
+    (n_vars, n_obs) = data_matrix.shape
+    
+    n_pcs = min(n_pcs, n_vars)
     # compute the covariance matrix of the observations
     cov_matrix = matrix(cov(data_matrix))
 	
     # compute the spectral decomposition
     eig_vals, eig_vectors = sorted_eig(cov_matrix)
+    print eig_vals.tolist()
+    print ("Nonzero eigvals: %d" % sum(eig_vals > 0))    
+    
     eig_vectors = matrix(eig_vectors)
     principal_components = real(eig_vectors[:,:n_pcs])
     projected_data = transpose(principal_components) * data_matrix
@@ -172,12 +187,13 @@ def pca(data_matrix, n_pcs):
     # data_matrix - a Numpy matrix that contains the data - the columns of this
         # matrix are individual observations, and the rows are variables (i.e. dimensions)
     # n_pcs - the deisred number of Principal components
-def em_pca(data_matrix, n_pcs):
+def em_pca(data_matrix, n_pcs, tolerance=.000001):
     [n_vars, n_obs] = data_matrix.shape
     
     # Start with an initial guess for the loadings matrix (or eigenvectors)
     loadings = matrix(rand_array(n_vars, n_pcs))
     
+    prev_err = float("inf")
     while(True):
         # E-STEP - compute new scores based on current loadings
         # a.k.a. compute projected data based on current eigenvectors
@@ -189,7 +205,56 @@ def em_pca(data_matrix, n_pcs):
         
         # Compute the squared error
         error = square(data_matrix - loadings * proj_data).sum()
-        print(error)
+        
+        # If the error is no longer decreasing, then we have converged
+        error_ratio = error / prev_err
+        print(error_ratio)
+        if (error_ratio > (1 - tolerance)):
+            break
+        prev_err = error
+
+    # Now that the EM algorithm has converged, the loadings span the correct lower-
+    # dimensional space, and the data is projected into it.  We now use the regular
+    # PCA on this lower-dimensional matrix to finish it off and decorrelate the
+    # dimensions
+    proj_matrix = inv(loadings.transpose() * loadings) * loadings.transpose()
+    proj_data =  proj_matrix * data_matrix
+    
+
+    new_cov = cov(proj_data)
+    orth_cov, rmat = qr(new_cov)
+    del(rmat)
+    orth_cov = matrix(orth_cov)
+    
+
+
+    """
+    new_pcs, new_projected_data = pca(proj_data, n_pcs)
+
+    print proj_matrix.shape
+    print new_pcs.shape
+    print new_projected_data.shape
+    final_pcs = (new_pcs * proj_matrix).transpose() 
+    new_data = final_pcs.transpose() * data_matrix
+    """
+    
+    
+    import pdb; pdb.set_trace()
+    return final_pcs , new_projected_data
+
+
+
+
+def run_opursuit(pace_group, gamma):
+    data_matrix = column_stack(pace_group)
+    O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not
+    L,C,term,n_iter = opursuit(data_matrix, O, gamma)
+    
+    
+    outlier_scores = sqrt(sum(square(C), axis=0))    
+    
+    return list(outlier_scores)
+
 
 
 # Preprocesses a group of pace vectors by removing bad dimensions, scaling and centering,
@@ -198,16 +263,24 @@ def em_pca(data_matrix, n_pcs):
     # pace_group - a list of Numpy column vectors to be preprocessed
     # n_pcs - The number of principal components to use for PCA
     # scale - Whether or not to do scaling after centering - see scale_and_center()
-def preprocess_group(pace_group, n_pcs=0, scale=False):
+def preprocess_group(pace_group, n_pcs=0, scale=True):
     data_matrix = column_stack(pace_group)
     
     scale_and_center(data_matrix, scale)
     pcs, projected_data = pca(data_matrix, n_pcs)
     
+    em_pcs, em_projected_data = em_pca(data_matrix, n_pcs)
+    import pdb; pdb.set_trace()
+        
+    
+    
     # Split the matrix back into vectors
     new_group = [projected_data[:,i] for i in xrange(len(pace_group))]
     
     return new_group
+
+
+
 
 
 # Preprocesses many groups of pace vectors by removing bad dimensions, scaling
@@ -225,12 +298,15 @@ def preprocess_group(pace_group, n_pcs=0, scale=False):
     # pool - An optional multiprocessing.Pool if parallel processing is desired
 def preprocess_data(pace_grouped, n_pcs, perc_missing_allowed=.05, scale=True, pool=DefaultPool()):
     
+    print(perc_missing_allowed)
     # First, remove the dimensions that have too much missing data.
     pace_grouped = remove_bad_dimensions_grouped(pace_grouped, perc_missing_allowed)
     
+    
     # Now, prepare the preprocess_group() function to be mapped onto the groups
     # by "freezing" the other parameters
-    preprocessing_func = partial(preprocess_group, n_pcs=n_pcs, scale=scale)
+    #preprocessing_func = partial(preprocess_group, n_pcs=n_pcs, scale=scale)
+    preprocessing_func = run_opursuit    
     
     # Make the pace groups into a list instead of a dictionary so they can be mapped
     sorted_keys = sorted(pace_grouped)

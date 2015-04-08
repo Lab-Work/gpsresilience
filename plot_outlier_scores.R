@@ -20,6 +20,12 @@ shortenDates = function(dates){
 }
 
 
+smartMahalQuant = function(t, quant){
+	s = t[t$date < "2010-08-01" | t$date > "2010-09-30",]
+	return (quantile(s$mahal, quant))
+}
+
+
 
 #Adds events as translucent squares on top of the probability plot
 #Arguments:
@@ -143,12 +149,13 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	
 	#Create the plot of the outlier scores
 	#plot(s1_lnl, col="black", type="l", main=title, ylim = quantile(s1_lnl, c(.002,1)), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	plot(s1_lnl, col="black", type="l", main=title, ylim = c(0,8), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	lines(s2_lnl, col="blue", type="l", lwd=1)
+	plot(s1_lnl, col="black", type="l", main=title, ylim = c(0,25), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	lines(s1$c_val, col="blue", type="s", lwd=1)
+	#lines(s2_lnl, col="blue", type="l", lwd=1)
 
 	#Use a 5% quantile on the values from the ORIGINAL data to determine the threshold
 	#Draw a horizontal line for the threshold
-	#abline(h=quantile(t1_lnl, c(.90, .95, .99)), col="black", lty=2)
+	abline(h=quantile(t1_lnl, c(.90, .95, .99)), col="black", lty=2)
 	#abline(h=quantile(t2_lnl, c(.90,.95, .99)), col="blue", lty=2)
 	  
 
@@ -167,13 +174,8 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	#legend("topright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
 	#	  lwd=c(2,2), bg="white")
 
-	legend("topright", legend=c("Coarse", "Fine"), col=c("black", "blue"), lwd=2, bg="white")
+	legend("topright", legend=c("Mahalanobis", "C != 0"), col=c("black", "blue"), lwd=2, bg="white")
 }
-
-
-
-
-
 
 
 
@@ -189,13 +191,15 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 makeplot = function(startDate, endDate, inFile, outFile, title){
 
 	#Read table from file and select the desired subset
-	t1 = read.csv("results/outlier_scores.csv")
+	#t1 = read.csv("results/coarse_outlier_scores.csv")
+	#t1 = read.csv("results/coarse_features_imb20_k10_RPCA50_10pcs_5percmiss_robust_outlier_scores.csv")
+	t1 = read.csv(inFile)	
 	t1$date = as.character(t1$date)
-	t1$mahal = t1$mahal / 4.0
+	t1$mahal = t1$mahal
 	s1 = t1[t1$date>=startDate & t1$date<=endDate,]
 
 
-	t2 = read.csv("results/link_20_normalize_outlier_scores.csv")
+	t2 = read.csv("results/outlier_scores.csv")
 	t2$date = as.character(t2$date)
 	s2 = t2[t2$date>=startDate & t2$date<=endDate,]
 
@@ -223,31 +227,56 @@ makeplot = function(startDate, endDate, inFile, outFile, title){
 
 
 
-makeLofPlot = function(startDate, endDate, inFile, outFile, title){
-	#Read table from file and select the desired subset
-	t = read.csv(inFile)
-	t$date = as.character(t$date)
-	s = t[t$date>=startDate & t$date<=endDate,]
+addPcPlot = function(dataset, startDate, endDate, pc_vals, percmiss, title){
+
+	print(title)
+
+	cols = c("black", "darkblue", "blue", "darkgreen", "green", "yellow", "orange", "red", "darkred", "purple")
+	firstPlot = T
+
+	hours_above_90 = numeric(length(pc_vals))
+	hours_above_95 = numeric(length(pc_vals))
+	hours_above_99 = numeric(length(pc_vals))
+
+	for(i in 1:length(pc_vals)){
+		pc = pc_vals[i]
+		col = cols[i]
+		csv_file = paste("results/",dataset, "_", pc, "pcs_",percmiss, "percmiss_outlier_scores.csv", sep="")
+		t = read.csv(csv_file)
+		t$date = as.character(t$date)
+		s = t[t$date >= startDate & t$date <= endDate,]
+		print(pc)
+
+		# if this is the first PC, make a new plot
+		if(firstPlot){
+			plot(0, 0, type="n", main=title, ylim = c(0,15), xlim=c(1,nrow(s)), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+			firstPlot = F
+		}
+		
+		#if(pc==pc_vals[1] || pc== pc_vals[length(pc_vals)]){
+		#	my_lwd=2
+		#}
+		#else{
+		#	my_lwd=1
+		#}
+		my_lwd=1
+		lines(s$mahal, col=col, type="l", lwd=my_lwd)
+		abline(h=smartMahalQuant(t, .95), col=col, lwd=1)
+		hours_above_90[i] = sum(s$mahal > smartMahalQuant(t, .90))
+		hours_above_95[i] = sum(s$mahal > smartMahalQuant(t, .95))
+		hours_above_99[i] = sum(s$mahal > smartMahalQuant(t, .99))
+	}
 
 
-	#Create PDF  
-	print(paste("Creating", outFile))
-	pdf(outFile, 12, 8)
-	par(mfrow=c(2,1), mar=c(3,5,2,1))
 
-	#Create the plot of the probability
-	plot(s$lof1, col="black", type="l", main=title, ylim = quantile(s$lof1, c(.002,1)), xaxt="n", xlab="", ylab="Local Outlier Factor", lwd=2)
-	lines(s$lof3, col="darkblue", lwd=2)
-	lines(s$lof5, col="blue", lwd=2)
-	lines(s$lof10, col="darkgreen", lwd=2)
-	lines(s$lof20, col="green", lwd=2)
-	lines(s$lof30, col="orange", lwd=2)
-	lines(s$lof50, col="red", lwd=2)
-	
-	legend("topright",
-		legend=c("k=1", "k=3", "k=5", "k=10", "k=20", "k=30", "k=50"),
-		col=c("black", "darkblue", "blue", "darkgreen", "green", "orange", "red"), lwd=2)
-	
+
+
+	#Use a 5% quantile on the values from the ORIGINAL data to determine the threshold
+	#Draw a horizontal line for the threshold
+	#abline(h=quantile(t1_lnl, c(.90, .95, .99)), col="black", lty=2)
+	#abline(h=quantile(t2_lnl, c(.90,.95, .99)), col="blue", lty=2)
+	  
+
 	#Add dates as x-axis labels
 	ids = (0:20) * 24 + 1
 	short_dates = shortenDates(s$date)
@@ -259,50 +288,27 @@ makeLofPlot = function(startDate, endDate, inFile, outFile, title){
 	ids2 = (0:3)*24*7 + 1
 	abline(v=ids2, lwd=3)
 
-	addPacePlot(s)
+	#Add the legend
+	#legend("topright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
+	#	  lwd=c(2,2), bg="white")
+
+	legend("topright", legend=rev(paste(pc_vals, "PCs")) , col=rev(cols), lwd=2, bg="white")
 
 
+	# Make PCs vs. Num Hours Above Threshold plots
+	plot(1:length(pc_vals), hours_above_90, col="blue", type="l", lwd=2,
+		ylim = range(hours_above_90, hours_above_95, hours_above_99),
+		main="Total Hours Above Threshold During 3 Weeks", xlab="Num PCs", ylab="Hours")
+	lines(1:length(pc_vals), hours_above_95, col="black", lwd=2)
+	lines(1:length(pc_vals), hours_above_99, col="red", lwd=2)
+	legend("topleft", legend=c("90% Threshold", "95% Threshold", "99% Threshold"),
+		col=c("blue", "black", "red"), lwd=2, bg="white")
 }
 
 
-#Makes a plot that compares the gaussian density with the kernel density
-#Arguments:
-	#startDate - the beginning of the desired time range to plot
-	#endDate - the end of the desired time ragne to plot
-	#inFile - the file that contains the time-series probabilities (see likelihood_test_parallel.py)
-	#outFile - the PDF file to generate
-	#title - the main title of the figure
-makeKernPlot = function(startDate, endDate, inFile, outFile, title){
 
 
-	#Set up the PDF  
-	print(paste("Creating", outFile))
-	pdf(outFile, 12, 8)
-	#Each page contains 2 plots
-	par(mfrow=c(2,1), mar=c(3,5,2,1))
 
-	#Read the data from file
-	t = read.csv(inFile)
-	t$date = as.character(t$date)
-	s = t[t$date>=startDate & t$date<=endDate,]
-
-	#Add the time-series plot of the full outulier scores
-	addOutlierPlot(s, t, title, type="full")
- 
-	#Add the time-serires pace plot
-	addPacePlot(s)
-  
-	#Add the time-series plot of the kernel density estimates
-	addOutlierPlot(s, t, title, type="kern")
- 
-	#Add another pace plot
-	addPacePlot(s)
-	
-	
-	
-	dev.off()
-	
-}
 
 
 #Makes a plot to demonstrate the thrashing of the time-series probability over the thresholds
@@ -373,6 +379,19 @@ dateToRange = function(dateStr){
 
 
 #Make probability plots for several interesting events
+
+pdf("results/sandylambda.pdf", 12, 8)
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA20_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.2")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA30_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.3")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA40_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.4")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA50_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.5")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA60_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.6")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA70_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.7")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA80_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.8")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA90_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.9")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA100_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=1.0")
+dev.off()
+
 if(F){
 makeplot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/event_Sandy_mahal.pdf", "Event Detection")
 makeplot("2010-12-20", "2011-01-09", "results/outlier_scores.csv", "results/event_Blizzard_mahal.pdf", "Event Detection")
@@ -397,17 +416,68 @@ if(F){
 }
 
 
-if(T){
+if(F){
 	t = read.csv("results/link_20_normalize_events_windowed.csv")
 	pdf("results/lots_of_events.pdf")
 	for(i in 1:20){
 		rng = dateToRange(t$start_date[i])
 		print(rng)
-		makeplot(rng[1],rng[2], "blah", "[IGNORE]", "Event Detection")
+		makeplot(rng[1],rng[2], "blah", "[IGNORE]", "RPCA Lambda=0.1")
 	}
 	dev.off()
 }
 
+if(F){
+	pdf("results/principal_components_mahal.pdf", 12, 8)
+	pc_vals = 1:10
+	
+	#addPcPlot("features_imb20_k4", "2012-10-21", "2012-11-11", pc_vals, percmiss=1,
+	#	title="Hurricane Sandy, 4 Regions, 1% missing data allowed per dimension")
+	#
+	#addPcPlot("features_imb20_k10", "2012-10-21", "2012-11-11", pc_vals, percmiss=1,
+	#	title="Hurricane Sandy, 10 Regions, 1% missing data allowed per dimension")
+	#
+	#addPcPlot("features_imb20_k4", "2010-12-20", "2011-01-09", pc_vals, percmiss=1,
+	#	title="Blizzard, 4 Regions, 1% missing data allowed per dimension")
+	#addPcPlot("features_imb20_k10", "2010-12-20", "2011-01-09", pc_vals, percmiss=1,
+	#	title="Blizzard, 10 Regions, 1% missing data allowed per dimension")
+	#
+	#
 
+	addPcPlot("features_imb20_k4", "2012-10-21", "2012-11-11", pc_vals, percmiss=5,
+		title="Hurricane Sandy, 4 Regions, 5% missing data allowed per dimension")
+	addPcPlot("features_imb20_k10", "2012-10-21", "2012-11-11", pc_vals, percmiss=5,
+		title="Hurricane Sandy, 10 Regions, 5% missing data allowed per dimension")
+
+	addPcPlot("features_imb20_k4", "2010-12-20", "2011-01-09", pc_vals, percmiss=5,
+		title="Blizzard, 4 Regions, 5% missing data allowed per dimension")
+	addPcPlot("features_imb20_k10", "2010-12-20", "2011-01-09", pc_vals, percmiss=5,
+		title="Blizzard, 10 Regions, 5% missing data allowed per dimension")
+
+
+	addPcPlot("features_imb20_k4", "2011-03-06", "2011-03-27", pc_vals, percmiss=5,
+		title="Regular Week, 4 Regions, 5% missing data allowed per dimension")
+	addPcPlot("features_imb20_k10", "2011-03-06", "2011-03-27", pc_vals, percmiss=5,
+		title="Regular Week, 10 Regions, 5% missing data allowed per dimension")
+
+
+	addPcPlot("features_imb20_k4", "2013-06-02", "2013-06-23", pc_vals, percmiss=5,
+		title="Another Regular Week, 4 Regions, 5% missing data allowed per dimension")
+	addPcPlot("features_imb20_k10", "2013-06-02", "2013-06-23", pc_vals, percmiss=5,
+		title="Another Regular Week, 10 Regions, 5% missing data allowed per dimension")
+
+	
+
+	#addPcPlot("features_imb20_k4", "2012-10-21", "2012-11-11", pc_vals, percmiss=10,
+	#	title="Hurricane Sandy, 4 Regions, 10% missing data allowed per dimension")
+	#addPcPlot("features_imb20_k10", "2012-10-21", "2012-11-11", pc_vals, percmiss=10,
+	#	title="Hurricane Sandy, 10 Regions, 10% missing data allowed per dimension")
+
+	#addPcPlot("features_imb20_k4", "2010-12-20", "2011-01-09", pc_vals, percmiss=10,
+	#	title="Blizzard, 4 Regions, 10% missing data allowed per dimension")
+	#addPcPlot("features_imb20_k10", "2010-12-20", "2011-01-09", pc_vals, percmiss=10,
+	#	title="Blizzard, 10 Regions, 10% missing data allowed per dimension")
+	dev.off()
+}
 
 

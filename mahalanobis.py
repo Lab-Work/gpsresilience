@@ -5,10 +5,21 @@ Created on Tue Sep 30 19:28:30 2014
 @author: Brian Donovan (briandonovan100@gmail.com)
 """
 from tools import *
-from numpy import transpose, matrix, nonzero, ravel, diag, sqrt, where, square, zeros, multiply
+from numpy import transpose, matrix, nonzero, ravel, diag, sqrt, where, square
+from numpy import zeros, multiply, column_stack
 from numpy.linalg import inv, eig
 
+from data_preprocessing import pca, scale_and_center
+from pyrpca_core.op import opursuit
+
+
+
+
 from random import random
+
+
+
+
 
 
 #Represents a set of statistics for a group of mean pace vectors
@@ -337,7 +348,7 @@ class IndependentGroupedStats:
 
 
 
-        
+"""        
 #Computes the mahalanobis distance of each vector from the mean
 #Using a leave-one-out estimate.  Also computes the element-wise standardized vector (z-scores)
 #params:
@@ -386,6 +397,61 @@ def computeMahalanobisDistances(vectors, independent=False, group_of_weights=Non
         
     #finally, return the computed distances and zscores
     return (distances, zscores)
+"""
+
+# Compute the Mahalanobis Distances of a group of vectors in order to quantify
+# how unusual they are.  PCA approximation is used for high dimensional data,
+# and Robust PCA via Outlier Pursuit is available.
+# Params:
+    # vectors - a list of Numpy column vectors
+    # robust - True if RPCA via OP is desired
+    # k - Number of PCs to use in PCA
+    # gamma - gamma parameter for RPCA
+def computeMahalanobisDistances(vectors, robust=False, k=10, gamma=.5):
+    if(robust):
+        data_matrix = column_stack(vectors)
+        O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not
+        
+        #logMsg("OP")
+         # Use outlier pursuit to get robust low-rank approximation of data
+        L,C,term,n_iter = opursuit(data_matrix, O, gamma)
+        
+        #logMsg("PCA")
+        # Perform PCA on the low-rank approximation, and estimate the statistics
+        scaled_L = scale_and_center(L)
+        pcs, robust_lowdim_data = pca(scaled_L, k)
+        
+        #logMsg("Mahal")
+        vects = [robust_lowdim_data[:,i] for i in xrange(robust_lowdim_data.shape[1])]
+        stats = IndependentGroupedStats(vects) # Diagonal covariance assumption is valid since we did PCA
+
+        #print("")        
+        # Project the original reconstructed data into the low-D space
+        # (L+C, which includes the outliers)
+        scaled_corrupt = scale_and_center(L+C, reference_matrix=L)
+        corrupt_lowdim_data = pcs.transpose() * scaled_corrupt
+        
+        vects = [corrupt_lowdim_data[:,i] for i in xrange(corrupt_lowdim_data.shape[1])]
+        mahals = [stats.mahalanobisDistance(vect) for vect in vects]
+        c_vals = [(sum(square(C[:,i]))!=0)*1 for i in  xrange(C.shape[1])]
+
+        return mahals, c_vals
+    else:
+        pcs, lowdim_data = pca(L, k)
+        vects = [lowdim_data[:,i] for i in xrange(lowdim_data.shape[1])]
+        stats = IndependentGroupedStats(vects) # Diagonal covariance assumption is valid since we did PCA
+
+        mahals = [stats.generateLeave1stats(vect).mahalanobisDistance(vect) for vect in vects]
+        
+        return mahals
+        
+
+
+
+
+
+
+
 
 
 # A helper method for testing purposes.  Randomly generates vectors in [0,1]
