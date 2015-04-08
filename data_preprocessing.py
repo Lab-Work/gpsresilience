@@ -14,6 +14,7 @@ import numpy as np
 from functools import partial
 from tools import DefaultPool
 
+from sys import stdout
 
 
 
@@ -46,6 +47,7 @@ def remove_bad_dimensions(data_matrix, perc_missing_allowed=.01):
     smaller_data_matrix = data_matrix[good_dims,:]
     n_vars, n_obs = smaller_data_matrix.shape
     print("Full data matrix after cutting: %d x %d" % (n_vars, n_obs))
+    stdout.flush()
     return smaller_data_matrix
 
 
@@ -176,6 +178,7 @@ def pca(data_matrix, n_pcs):
     eig_ratios = [trunc_eigs[i] / trunc_eigs[i+1] for i in range(len(trunc_eigs)-1)]
     print "Eigen ratios: " + str(eig_ratios)
     print
+    stdout.flush()
     
     
     eig_vectors = matrix(eig_vectors)
