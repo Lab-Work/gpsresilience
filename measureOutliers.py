@@ -274,7 +274,7 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
 
     logMsg("Done.")
     
-    pool.close()
+    #pool.close()
 
 if(__name__=="__main__"):
     #logMsg("Running raw analysis")
@@ -286,7 +286,7 @@ if(__name__=="__main__"):
     
 
     for gamma in [.2,.3,.4,.5,.6,.7,.8,.9,1]:
-        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=False, robust=True, num_pcs=10,
+        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=True, robust=True, num_pcs=10,
                                         gamma=gamma, perc_missing_allowed=.05, make_zscore_vid=False, pool=pool)
     
     """
