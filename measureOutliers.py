@@ -18,6 +18,7 @@ from lof import *
 from tools import *
 
 from measureLinkOutliers import load_pace_data, load_from_file
+from sys import stdout
 
 NUM_PROCESSORS = 8
 
@@ -211,6 +212,7 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
 
     logMsg("Starting processes")
     logMsg("Doing RPCA with gamma=%f, k=%d" % (gamma, num_pcs))
+    stdout.flush()
 
     # Freeze the parameters of the computeMahalanobisDistances() function
     mahalFunc = partial(computeMahalanobisDistances, robust=robust, k=num_pcs,
@@ -284,7 +286,7 @@ if(__name__=="__main__"):
     
 
     for gamma in [.2,.3,.4,.5,.6,.7,.8,.9,1]:
-        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=True, robust=True, num_pcs=10,
+        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=False, robust=True, num_pcs=10,
                                         gamma=gamma, perc_missing_allowed=.05, make_zscore_vid=False, pool=pool)
     
     """
