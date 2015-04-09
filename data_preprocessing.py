@@ -180,6 +180,7 @@ def pca(data_matrix, n_pcs):
     print
     stdout.flush()
     
+    n_pcs = min(n_pcs, rank)
     
     eig_vectors = matrix(eig_vectors)
     principal_components = real(eig_vectors[:,:n_pcs])

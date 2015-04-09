@@ -380,6 +380,7 @@ dateToRange = function(dateStr){
 
 #Make probability plots for several interesting events
 
+if(F){
 pdf("results/sandylambda.pdf", 12, 8)
 makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA20_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.2")
 makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA30_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.3")
@@ -391,6 +392,23 @@ makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA80_2
 makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA90_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.9")
 makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA100_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=1.0")
 dev.off()
+}
+
+
+
+if(T){
+pdf("results/sandy_coarse_lambda.pdf", 12, 8)
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA30_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.3")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA40_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.4")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA50_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.5")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA60_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.6")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA70_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.7")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA80_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.8")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA90_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.9")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA100_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=1.0")
+dev.off()
+}
+
 
 if(F){
 makeplot("2012-10-21", "2012-11-11", "results/outlier_scores.csv", "results/event_Sandy_mahal.pdf", "Event Detection")

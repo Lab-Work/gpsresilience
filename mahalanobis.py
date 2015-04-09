@@ -420,6 +420,7 @@ def computeMahalanobisDistances(vectors, robust=False, k=10, gamma=.5):
         # Perform PCA on the low-rank approximation, and estimate the statistics
         centered_L = scale_and_center(L, scale=False)
         pcs, robust_lowdim_data = pca(centered_L, k)
+        num_pca_dimensions = pcs.shape[1]        
         
         #logMsg("Mahal")
         vects = [robust_lowdim_data[:,i] for i in xrange(robust_lowdim_data.shape[1])]
@@ -432,7 +433,7 @@ def computeMahalanobisDistances(vectors, robust=False, k=10, gamma=.5):
         corrupt_lowdim_data = pcs.transpose() * centered_corrupt
         
         vects = [corrupt_lowdim_data[:,i] for i in xrange(corrupt_lowdim_data.shape[1])]
-        mahals = [stats.mahalanobisDistance(vect) for vect in vects]
+        mahals = [stats.mahalanobisDistance(vect)/num_pca_dimensions for vect in vects]
         c_vals = [(sum(square(C[:,i]))!=0)*1 for i in  xrange(C.shape[1])]
 
         return mahals, c_vals

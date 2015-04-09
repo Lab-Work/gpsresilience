@@ -179,6 +179,7 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
     
     #Read the time-series data from the file
     logMsg("Reading files...")
+    stdout.flush()
     if(use_link_db):
         file_prefix = "link_"
         
@@ -282,11 +283,11 @@ if(__name__=="__main__"):
     
     
     #generateTimeSeriesLeave1("features_imb20_k10", use_link_db=False, num_pcs=3, perc_missing_allowed=.05)
-    pool = Pool(16)
+    pool = Pool(8)
     
 
-    for gamma in [.2,.3,.4,.5,.6,.7,.8,.9,1]:
-        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=True, robust=True, num_pcs=10,
+    for gamma in [.1,.3,.4,.5,.6,.7,.8,.9,1]:
+        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=False, robust=True, num_pcs=100000,
                                         gamma=gamma, perc_missing_allowed=.05, make_zscore_vid=False, pool=pool)
     
     """
