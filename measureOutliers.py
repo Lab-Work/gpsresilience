@@ -158,10 +158,10 @@ def reduceOutlierScores(scores, sorted_keys, dates_grouped):
     all_entries = []
     for i in xrange(len(sorted_keys)):
         this_hour, this_weekday = sorted_keys[i]
-        mahals, c_vals = scores[i]
-        for j in xrange(len(mahals)):
+        mahals25, mahals50, mahals75, mahals100, c_vals = scores[i]
+        for j in xrange(len(mahals25)):
             this_date = dates_grouped[sorted_keys[i]][j]
-            entry = (this_date, this_hour, this_weekday, mahals[j], c_vals[j])
+            entry = (this_date, this_hour, this_weekday, mahals25[j], mahals50[j], mahals75[j], mahals100[j], c_vals[j])
             all_entries.append(entry)
     
     all_entries.sort()
@@ -232,10 +232,10 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
     logMsg("Writing file")
     #Output outlier scores to file
     scoreWriter = csv.writer(open("results/%s_robust_outlier_scores.csv"%file_prefix, "w"))
-    scoreWriter.writerow(['date','hour','weekday', 'mahal' ,'c_val','global_pace', 'expected_pace', 'sd_pace'])
+    scoreWriter.writerow(['date','hour','weekday', 'mahal25', 'mahal50', 'mahal75', 'mahal100' ,'c_val','global_pace', 'expected_pace', 'sd_pace'])
     
 
-    for (date, hour, weekday, mahal, c_val) in sorted(entries):
+    for (date, hour, weekday, mahal25, mahal50, mahal75, mahal100, c_val) in sorted(entries):
         try:
             gl_pace = global_pace_timeseries[(date, hour, weekday)]
             exp_pace = expected_pace_timeseries[(date, hour, weekday)]
@@ -245,7 +245,7 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
             exp_pace = 0
             sd_pace = 0
         
-        scoreWriter.writerow([date, hour, weekday, mahal, c_val, gl_pace, exp_pace, sd_pace])
+        scoreWriter.writerow([date, hour, weekday, mahal25, mahal50, mahal75, mahal100, c_val, gl_pace, exp_pace, sd_pace])
 
 
     """
@@ -284,10 +284,12 @@ if(__name__=="__main__"):
     
     #generateTimeSeriesLeave1("features_imb20_k10", use_link_db=False, num_pcs=3, perc_missing_allowed=.05)
     pool = Pool(8)
-    
+    #pool = DefaultPool()
 
-    for gamma in [.1,.3,.4,.5,.6,.7,.8,.9,1]:
-        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=False, robust=True, num_pcs=100000,
+    #for gamma in [.1,.3,.4,.5,.6,.7,.8,.9,1]:
+    #for gamma in [.5,.6]:
+    for gamma in [.9, .91, .92, .93, .94, .95, .96, .97, .98, .99, .3, .4, .5, .6, .7, .8, 1]:
+        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=True, robust=True, num_pcs=100000,
                                         gamma=gamma, perc_missing_allowed=.05, make_zscore_vid=False, pool=pool)
     
     """

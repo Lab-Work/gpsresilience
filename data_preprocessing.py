@@ -177,8 +177,7 @@ def pca(data_matrix, n_pcs):
     print "Eigen vals: " + str(trunc_eigs)
     eig_ratios = [trunc_eigs[i] / trunc_eigs[i+1] for i in range(len(trunc_eigs)-1)]
     print "Eigen ratios: " + str(eig_ratios)
-    print
-    stdout.flush()
+
     
     n_pcs = min(n_pcs, rank)
     

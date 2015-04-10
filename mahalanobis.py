@@ -12,14 +12,14 @@ from numpy.linalg import inv, eig
 from data_preprocessing import pca, scale_and_center
 from pyrpca_core.op import opursuit
 
-
+from math import ceil
 
 
 from random import random
 
 
 
-
+from sys import stdout
 
 
 #Represents a set of statistics for a group of mean pace vectors
@@ -399,6 +399,22 @@ def computeMahalanobisDistances(vectors, independent=False, group_of_weights=Non
     return (distances, zscores)
 """
 
+
+
+def lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, keep_dims):
+    new_pcs = pcs[:,0:keep_dims]
+    new_rld = robust_lowdim_data[0:keep_dims,:]
+    
+    
+    vects = [new_rld[:,i] for i in xrange(new_rld.shape[1])]
+    stats = IndependentGroupedStats(vects) # Diagonal covariance assumption is valid since we did PCA
+    
+    corrupt_lowdim_data = new_pcs.transpose() * centered_corrupt
+    vects = [corrupt_lowdim_data[:,i] for i in xrange(corrupt_lowdim_data.shape[1])]
+    mahals = [stats.mahalanobisDistance(vect)/sqrt(keep_dims) for vect in vects]
+    
+    return mahals
+
 # Compute the Mahalanobis Distances of a group of vectors in order to quantify
 # how unusual they are.  PCA approximation is used for high dimensional data,
 # and Robust PCA via Outlier Pursuit is available.
@@ -416,27 +432,30 @@ def computeMahalanobisDistances(vectors, robust=False, k=10, gamma=.5):
          # Use outlier pursuit to get robust low-rank approximation of data
         L,C,term,n_iter = opursuit(data_matrix, O, gamma)
         
+        
         #logMsg("PCA")
         # Perform PCA on the low-rank approximation, and estimate the statistics
         centered_L = scale_and_center(L, scale=False)
         pcs, robust_lowdim_data = pca(centered_L, k)
         num_pca_dimensions = pcs.shape[1]        
         
-        #logMsg("Mahal")
-        vects = [robust_lowdim_data[:,i] for i in xrange(robust_lowdim_data.shape[1])]
-        stats = IndependentGroupedStats(vects) # Diagonal covariance assumption is valid since we did PCA
-
-        #print("")        
-        # Project the original reconstructed data into the low-D space
-        # (L+C, which includes the outliers)
-        centered_corrupt = scale_and_center(L+C, reference_matrix=L, scale=False)
-        corrupt_lowdim_data = pcs.transpose() * centered_corrupt
         
-        vects = [corrupt_lowdim_data[:,i] for i in xrange(corrupt_lowdim_data.shape[1])]
-        mahals = [stats.mahalanobisDistance(vect)/num_pca_dimensions for vect in vects]
+        centered_corrupt = scale_and_center(L+C, reference_matrix=L, scale=False)
+        
+        print ("Using %d, %d, %d, %d" % (int(ceil(.25*num_pca_dimensions)), int(ceil(.5*num_pca_dimensions)), int(ceil(.75*num_pca_dimensions)), int(ceil(100*num_pca_dimensions)) ))
+        print
+        stdout.flush()
+        mahals25 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, int(ceil(.25*num_pca_dimensions)))
+        mahals50 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, int(ceil(.50*num_pca_dimensions)))
+        mahals75 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, int(ceil(.75*num_pca_dimensions)))
+        mahals100 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, int(ceil(.75*num_pca_dimensions)))
+
+ 
+ 
+ 
         c_vals = [(sum(square(C[:,i]))!=0)*1 for i in  xrange(C.shape[1])]
 
-        return mahals, c_vals
+        return mahals25, mahals50, mahals75, mahals100, c_vals
     else:
         pcs, lowdim_data = pca(L, k)
         vects = [lowdim_data[:,i] for i in xrange(lowdim_data.shape[1])]

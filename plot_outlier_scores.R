@@ -149,8 +149,9 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	
 	#Create the plot of the outlier scores
 	#plot(s1_lnl, col="black", type="l", main=title, ylim = quantile(s1_lnl, c(.002,1)), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	plot(s1_lnl, col="black", type="l", main=title, ylim = c(0,25), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	lines(s1$c_val, col="blue", type="s", lwd=1)
+	ymax = quantile(s1_lnl, .98)
+	plot(s1_lnl, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	lines(s1$c_val*ymax/4, col="blue", type="s", lwd=1)
 	#lines(s2_lnl, col="blue", type="l", lwd=1)
 
 	#Use a 5% quantile on the values from the ORIGINAL data to determine the threshold
@@ -380,32 +381,32 @@ dateToRange = function(dateStr){
 
 #Make probability plots for several interesting events
 
-if(F){
-pdf("results/sandylambda.pdf", 12, 8)
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA20_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.2")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA30_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.3")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA40_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.4")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA50_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.5")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA60_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.6")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA70_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.7")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA80_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.8")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA90_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.9")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA100_23pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=1.0")
+if(T){
+pdf("results/sandy_coarse_lambda.pdf", 12, 8)
+#makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA20_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.2")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA30_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.3")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA40_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.4")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA50_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.5")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA60_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.6")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA70_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.7")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA80_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.8")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA90_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.9")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA100_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=1.0")
 dev.off()
 }
 
 
 
-if(T){
-pdf("results/sandy_coarse_lambda.pdf", 12, 8)
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA30_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.3")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA40_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.4")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA50_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.5")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA60_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.6")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA70_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.7")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA80_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.8")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA90_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.9")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA100_10pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=1.0")
+if(F){
+pdf("results/sandy_fine_lambda.pdf", 12, 8)
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA30_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.3")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA40_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.4")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA50_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.5")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA60_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.6")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA70_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.7")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA80_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.8")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA90_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.9")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA100_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=1.0")
 dev.off()
 }
 
