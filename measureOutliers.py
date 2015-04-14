@@ -158,10 +158,10 @@ def reduceOutlierScores(scores, sorted_keys, dates_grouped):
     all_entries = []
     for i in xrange(len(sorted_keys)):
         this_hour, this_weekday = sorted_keys[i]
-        mahals25, mahals50, mahals75, mahals100, c_vals = scores[i]
-        for j in xrange(len(mahals25)):
+        mahals5, mahals10, mahals20, mahals50, c_vals, gamma_vals = scores[i]
+        for j in xrange(len(mahals5)):
             this_date = dates_grouped[sorted_keys[i]][j]
-            entry = (this_date, this_hour, this_weekday, mahals25[j], mahals50[j], mahals75[j], mahals100[j], c_vals[j])
+            entry = (this_date, this_hour, this_weekday, mahals5[j], mahals10[j], mahals20[j], mahals50[j], c_vals[j], gamma_vals[j])
             all_entries.append(entry)
     
     all_entries.sort()
@@ -170,8 +170,8 @@ def reduceOutlierScores(scores, sorted_keys, dates_grouped):
     
 
 def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_pcs=10,
-                                    gamma=.5, perc_missing_allowed=.05, make_zscore_vid=False,
-                                    pool = DefaultPool()):
+                                    gamma=.5, tol_perc=1e-06, perc_missing_allowed=.05,
+                                    make_zscore_vid=False, pool = DefaultPool()):
                                  
 
 
@@ -186,7 +186,7 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
         #pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names, consistent_link_set = load_pace_data(
         #    num_trips_threshold=consistent_threshold, pool=pool)
         
-        pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names, consistent_link_set = load_from_file('tmp_vectors.pickle')
+        pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names, consistent_link_set = load_from_file(use_link_db)
 
 
     else:
@@ -195,7 +195,10 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
 
 
     if(robust):
-        robustStr = "RPCA%d" % int(gamma*100)
+        if(gamma=="tune"):
+            robustStr = "RPCAtune"
+        else:
+            robustStr = "RPCA%d" % int(gamma*100)
     else:
         robustStr = "PCA"
 
@@ -212,12 +215,15 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
     (expected_pace_timeseries, sd_pace_timeseries) = getExpectedPace(global_pace_timeseries)
 
     logMsg("Starting processes")
-    logMsg("Doing RPCA with gamma=%f, k=%d" % (gamma, num_pcs))
+    if(gamma=="tune"):
+        logMsg("Doing RPCA and tuning gamma")
+    else:
+        logMsg("Doing RPCA with gamma=%f, k=%d" % (gamma, num_pcs))
     stdout.flush()
 
     # Freeze the parameters of the computeMahalanobisDistances() function
     mahalFunc = partial(computeMahalanobisDistances, robust=robust, k=num_pcs,
-                        gamma=gamma)
+                        gamma=gamma, tol_perc=tol_perc)
     
     # Compute all mahalanobis distances
     sorted_keys = sorted(pace_grouped)    
@@ -232,10 +238,10 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
     logMsg("Writing file")
     #Output outlier scores to file
     scoreWriter = csv.writer(open("results/%s_robust_outlier_scores.csv"%file_prefix, "w"))
-    scoreWriter.writerow(['date','hour','weekday', 'mahal25', 'mahal50', 'mahal75', 'mahal100' ,'c_val','global_pace', 'expected_pace', 'sd_pace'])
+    scoreWriter.writerow(['date','hour','weekday', 'mahal5', 'mahal10', 'mahal20', 'mahal50' ,'c_val', 'gamma', 'global_pace', 'expected_pace', 'sd_pace'])
     
 
-    for (date, hour, weekday, mahal25, mahal50, mahal75, mahal100, c_val) in sorted(entries):
+    for (date, hour, weekday, mahal5, mahal10, mahal20, mahal50, c_val, gamma) in sorted(entries):
         try:
             gl_pace = global_pace_timeseries[(date, hour, weekday)]
             exp_pace = expected_pace_timeseries[(date, hour, weekday)]
@@ -245,8 +251,10 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
             exp_pace = 0
             sd_pace = 0
         
-        scoreWriter.writerow([date, hour, weekday, mahal25, mahal50, mahal75, mahal100, c_val, gl_pace, exp_pace, sd_pace])
+        scoreWriter.writerow([date, hour, weekday,  mahal5, mahal10, mahal20, mahal50, c_val, gamma, gl_pace, exp_pace, sd_pace])
 
+
+    all_cvals = [c_val for (date, hour, weekday, mahal5, mahal10, mahal20, mahal50, c_val, gamma) in sorted(entries)]
 
     """
     zscoreWriter= csv.writer(open("results/%szscore.csv"%file_prefix, "w"))
@@ -274,24 +282,90 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
         
 
     logMsg("Done.")
+    return all_cvals
     
     #pool.close()
 
+
+def do_binary_search_on_gamma(gamma_guess, target_c_perc, inDir, use_link_db=False, tol_perc=1e-06,
+                              num_pcs=10, perc_missing_allowed=.05, pool = DefaultPool()):
+    
+    
+    search_rate = 1.2
+    #Initially, we don't have any bounds on our search
+    lo_gamma = None
+    hi_gamma = None
+    gamma = gamma_guess
+    while(True):
+        
+        
+        logMsg("BS: Trying gamma=%f" % gamma)
+        c_vals = generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=use_link_db,
+                                        robust=True, num_pcs=num_pcs, gamma=gamma, tol_perc=tol_perc,
+                                        perc_missing_allowed=perc_missing_allowed,
+                                        pool=pool)
+        
+        c_perc = float(sum(c_vals)) / len(c_vals)
+        logMsg("BS: Fraction of outliers: %f" % c_perc)
+        
+        if(c_perc / target_c_perc > .99 and c_perc / target_c_perc < 1.01):
+            break
+        
+        if(c_perc < target_c_perc):
+            logMsg("BS: Decreasing gamma")
+            # Don't have enough outliers - decrease gamma
+            hi_gamma = gamma
+            if(lo_gamma==None):
+                gamma /= search_rate
+            else:
+                gamma = (hi_gamma + lo_gamma) / 2
+        else:
+            logMsg("BS: Increasing gamma")
+            # Have too many outliers - increase gamma
+            lo_gamma = gamma
+            if(hi_gamma==None):
+                gamma *= search_rate
+            else:
+                gamma = (hi_gamma + lo_gamma) / 2
+        
+        logMsg("%s < gamma < %s" % (str(lo_gamma), str(hi_gamma)))
+        print("\n###########################\n")
+        
+        
+
+        
+        stdout.flush()
+        
+    logMsg("BS: Selected gamma=%f" % gamma)
+    stdout.flush()
+        
+
+
+
+
 if(__name__=="__main__"):
+    
+    
+    pool = Pool(2)
+    #pool = DefaultPool()
     #logMsg("Running raw analysis")
     #generateTimeSeriesLeave1("4year_features", use_link_db=True)
     
+    generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db="tmp_vectors.pickle", num_pcs=10000000,
+                             robust=True, gamma="tune", perc_missing_allowed=.05,
+                             pool=pool)
     
-    #generateTimeSeriesLeave1("features_imb20_k10", use_link_db=False, num_pcs=3, perc_missing_allowed=.05)
-    pool = Pool(8)
-    #pool = DefaultPool()
 
     #for gamma in [.1,.3,.4,.5,.6,.7,.8,.9,1]:
     #for gamma in [.5,.6]:
-    for gamma in [.9, .91, .92, .93, .94, .95, .96, .97, .98, .99, .3, .4, .5, .6, .7, .8, 1]:
-        generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=True, robust=True, num_pcs=100000,
-                                        gamma=gamma, perc_missing_allowed=.05, make_zscore_vid=False, pool=pool)
+    # for gamma in [.9, .91, .92, .93, .94, .95, .96, .97, .98, .99, .3, .4, .5, .6, .7, .8, 1]:
+    #     generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=True, robust=True, num_pcs=100000,
+    #                                     gamma=gamma, perc_missing_allowed=.05, make_zscore_vid=False, pool=pool)
     
+    
+    #do_binary_search_on_gamma(0.679370, .05, "features_imb20_k10", use_link_db='tmp_vectors_Monday_4.pickle', num_pcs=100000,
+    #                                     perc_missing_allowed=.05, tol_perc=.0005, pool=pool)
+                                         
     """
     logMsg("Running normalized analysis")
     generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True)

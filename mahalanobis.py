@@ -411,9 +411,69 @@ def lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, keep_
     
     corrupt_lowdim_data = new_pcs.transpose() * centered_corrupt
     vects = [corrupt_lowdim_data[:,i] for i in xrange(corrupt_lowdim_data.shape[1])]
-    mahals = [stats.mahalanobisDistance(vect)/sqrt(keep_dims) for vect in vects]
+    mahals = [stats.mahalanobisDistance(vect) for vect in vects]
     
     return mahals
+
+
+
+
+
+
+def tuneGamma(vectors, tol_perc, gamma_guess=1.0, target_c_perc=.05):
+    data_matrix = column_stack(vectors)
+    O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not
+        
+         
+    SEARCH_RATE = 1.2
+    TOLERANCE = .01
+    
+    #Initially, we don't have any bounds on our search
+    lo_gamma = None
+    hi_gamma = None
+    gamma = gamma_guess
+    num_guesses = 0
+    while(True):
+        
+        
+        logMsg("BS: Trying gamma=%f" % gamma)
+        
+        # Use outlier pursuit to detect outliers
+        L,C,term,n_iter = opursuit(data_matrix, O, gamma, tol_perc=tol_perc)
+        c_vals = [(sum(square(C[:,i]))!=0)*1 for i in  xrange(C.shape[1])]
+        
+        c_perc = float(sum(c_vals)) / len(c_vals)
+        logMsg("BS: Fraction of outliers: %f" % c_perc)
+        num_guesses += 1
+        
+        # If we have found an acceptable gamma value, then stop
+        if(c_perc > target_c_perc - TOLERANCE and c_perc < target_c_perc + TOLERANCE):
+            break
+        
+        # Otherwise, update gamma and try again
+        if(c_perc < target_c_perc):
+            logMsg("BS: Decreasing gamma")
+            # Don't have enough outliers - decrease gamma
+            hi_gamma = gamma
+            if(lo_gamma==None):
+                gamma /= SEARCH_RATE
+            else:
+                gamma = (hi_gamma + lo_gamma) / 2
+        else:
+            logMsg("BS: Increasing gamma")
+            # Have too many outliers - increase gamma
+            lo_gamma = gamma
+            if(hi_gamma==None):
+                gamma *= SEARCH_RATE
+            else:
+                gamma = (hi_gamma + lo_gamma) / 2
+        
+        logMsg("BS: %s < gamma < %s" % (str(lo_gamma), str(hi_gamma)))
+    
+    logMsg ("BS: Chose gamma=%f , fraction of outliers=%f after %d attempts" % (gamma, c_perc, num_guesses))
+    return gamma,L,C
+
+
 
 # Compute the Mahalanobis Distances of a group of vectors in order to quantify
 # how unusual they are.  PCA approximation is used for high dimensional data,
@@ -423,39 +483,41 @@ def lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, keep_
     # robust - True if RPCA via OP is desired
     # k - Number of PCs to use in PCA
     # gamma - gamma parameter for RPCA
-def computeMahalanobisDistances(vectors, robust=False, k=10, gamma=.5):
+def computeMahalanobisDistances(vectors, robust=False, k=10, gamma=.5, tol_perc=1e-06):
     if(robust):
-        data_matrix = column_stack(vectors)
-        O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not
         
-        #logMsg("OP")
-         # Use outlier pursuit to get robust low-rank approximation of data
-        L,C,term,n_iter = opursuit(data_matrix, O, gamma)
+        if(gamma=="tune"):
+            gamma,L,C = tuneGamma(vectors, tol_perc)
+        else:
+            data_matrix = column_stack(vectors)
+            O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not
+             # Use outlier pursuit to get robust low-rank approximation of data
+            L,C,term,n_iter = opursuit(data_matrix, O, gamma, tol_perc=tol_perc)
         
         
         #logMsg("PCA")
         # Perform PCA on the low-rank approximation, and estimate the statistics
         centered_L = scale_and_center(L, scale=False)
         pcs, robust_lowdim_data = pca(centered_L, k)
-        num_pca_dimensions = pcs.shape[1]        
+        num_pca_dimensions = pcs.shape[1]
+        logMsg("Num eigenvalues : %d" % num_pca_dimensions)
         
         
         centered_corrupt = scale_and_center(L+C, reference_matrix=L, scale=False)
         
-        print ("Using %d, %d, %d, %d" % (int(ceil(.25*num_pca_dimensions)), int(ceil(.5*num_pca_dimensions)), int(ceil(.75*num_pca_dimensions)), int(ceil(100*num_pca_dimensions)) ))
-        print
         stdout.flush()
-        mahals25 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, int(ceil(.25*num_pca_dimensions)))
-        mahals50 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, int(ceil(.50*num_pca_dimensions)))
-        mahals75 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, int(ceil(.75*num_pca_dimensions)))
-        mahals100 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, int(ceil(.75*num_pca_dimensions)))
+        mahals5 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, 5)
+        mahals10 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt,10)
+        mahals20 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, 20)
+        mahals50 = lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, 50)
 
  
  
  
         c_vals = [(sum(square(C[:,i]))!=0)*1 for i in  xrange(C.shape[1])]
+        gamma_vals = [gamma for i in xrange(C.shape[1])]
 
-        return mahals25, mahals50, mahals75, mahals100, c_vals
+        return mahals5, mahals10, mahals20, mahals50, c_vals, gamma_vals
     else:
         pcs, lowdim_data = pca(L, k)
         vects = [lowdim_data[:,i] for i in xrange(lowdim_data.shape[1])]

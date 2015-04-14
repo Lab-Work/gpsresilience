@@ -133,30 +133,22 @@ addPacePlot = function(s){
 addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 
 
-	#Depending on the type of outlier score, extract the right column
-	if(type=="mahal"){
-		s1_lnl = s1$mahal
-		t1_lnl = t1$mahal
-		s2_lnl = s2$mahal
-		t2_lnl = t2$mahal
-	}
-	else if(type=="lof"){
-		s1_lnl = s1$lof20
-		t1_lnl = t1$lof20
-		s2_lnl = s2$lof20
-		t2_lnl = t2$lof20
-	}
+
 	
 	#Create the plot of the outlier scores
 	#plot(s1_lnl, col="black", type="l", main=title, ylim = quantile(s1_lnl, c(.002,1)), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	ymax = quantile(s1_lnl, .98)
-	plot(s1_lnl, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	lines(s1$c_val*ymax/4, col="blue", type="s", lwd=1)
+	ymax = quantile(s1$mahal25, .995)
+	plot(s1$mahal25, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	lines(s1$mahal50, col="darkred", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	lines(s1$mahal75, col="darkgreen", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	lines(s1$mahal100, col="darkblue", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+
+	lines(s1$c_val*ymax/4, col="green", type="s", lwd=1)
 	#lines(s2_lnl, col="blue", type="l", lwd=1)
 
 	#Use a 5% quantile on the values from the ORIGINAL data to determine the threshold
 	#Draw a horizontal line for the threshold
-	abline(h=quantile(t1_lnl, c(.90, .95, .99)), col="black", lty=2)
+	#abline(h=quantile(t1_lnl, c(.90, .95, .99)), col="black", lty=2)
 	#abline(h=quantile(t2_lnl, c(.90,.95, .99)), col="blue", lty=2)
 	  
 
@@ -175,7 +167,7 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	#legend("topright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
 	#	  lwd=c(2,2), bg="white")
 
-	legend("topright", legend=c("Mahalanobis", "C != 0"), col=c("black", "blue"), lwd=2, bg="white")
+	legend("topright", legend=c("Mahalanobis 25%", "Mahalanobis 50%", "Mahalanobis 75%", "Mahalanobis 100%", "C != 0"), col=c("black", "darkred", "darkgreen", "darkblue", 'green'), lwd=2, bg="white")
 }
 
 
@@ -381,7 +373,7 @@ dateToRange = function(dateStr){
 
 #Make probability plots for several interesting events
 
-if(T){
+if(F){
 pdf("results/sandy_coarse_lambda.pdf", 12, 8)
 #makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA20_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.2")
 makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA30_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.3")
@@ -397,16 +389,26 @@ dev.off()
 
 
 
-if(F){
+if(T){
 pdf("results/sandy_fine_lambda.pdf", 12, 8)
 makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA30_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.3")
 makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA40_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.4")
 makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA50_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.5")
 makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA60_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.6")
 makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA70_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.7")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA80_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.8")
+#makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA80_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.8")
 makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA90_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.9")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA100_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=1.0")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA91_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.91")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA92_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.92")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA93_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.93")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA94_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.94")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA95_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.95")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA96_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.96")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA97_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.97")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA98_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.98")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA99_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.99")
+
+#makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA100_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=1.0")
 dev.off()
 }
 
