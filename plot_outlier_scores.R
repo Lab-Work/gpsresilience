@@ -137,18 +137,18 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	
 	#Create the plot of the outlier scores
 	#plot(s1_lnl, col="black", type="l", main=title, ylim = quantile(s1_lnl, c(.002,1)), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	ymax = quantile(s1$mahal25, .995)
-	plot(s1$mahal25, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	lines(s1$mahal50, col="darkred", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	lines(s1$mahal75, col="darkgreen", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	lines(s1$mahal100, col="darkblue", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	ymax = quantile(s1$mahal50, .995)
+	plot(s1$mahal5, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	lines(s1$mahal10, col="darkred", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	#lines(s1$mahal20, col="darkgreen", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	#lines(s1$mahal50, col="darkblue", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
 
 	lines(s1$c_val*ymax/4, col="green", type="s", lwd=1)
 	#lines(s2_lnl, col="blue", type="l", lwd=1)
 
 	#Use a 5% quantile on the values from the ORIGINAL data to determine the threshold
 	#Draw a horizontal line for the threshold
-	#abline(h=quantile(t1_lnl, c(.90, .95, .99)), col="black", lty=2)
+	abline(h=quantile(t1$mahal10, c(.90, .95, .99)), col="darkred", lty=2)
 	#abline(h=quantile(t2_lnl, c(.90,.95, .99)), col="blue", lty=2)
 	  
 
@@ -167,7 +167,7 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	#legend("topright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
 	#	  lwd=c(2,2), bg="white")
 
-	legend("topright", legend=c("Mahalanobis 25%", "Mahalanobis 50%", "Mahalanobis 75%", "Mahalanobis 100%", "C != 0"), col=c("black", "darkred", "darkgreen", "darkblue", 'green'), lwd=2, bg="white")
+	legend("topright", legend=c("Mahalanobis 5pc", "Mahalanobis 10pc", "C != 0"), col=c("black", "darkred", 'green'), lwd=2, bg="white", cex=.8)
 }
 
 
@@ -373,6 +373,34 @@ dateToRange = function(dateStr){
 
 #Make probability plots for several interesting events
 
+pdf( "results/sandy_fine_lambda_tuned_10p.pdf")
+makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores_10p.csv", "[IGNORE]", "RPCA Lambda Tuned to 10% Outliers")
+makeplot("2011-03-06", "2011-03-27", "results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores_10p.csv", "[IGNORE]", "RPCA Lambda Tuned to 10% Outliers")
+dev.off()
+
+
+
+
+pdf( "results/sandy_coarse_lambda_tuned_5p.pdf")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores_5p.csv", "[IGNORE]", "RPCA Lambda Tuned to 5% Outliers")
+makeplot("2011-03-06", "2011-03-27", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores_5p.csv", "[IGNORE]", "RPCA Lambda Tuned to 5% Outliers")
+dev.off()
+
+
+
+pdf( "results/sandy_coarse_lambda_tuned_10p.pdf")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores10p.csv", "[IGNORE]", "RPCA Lambda Tuned to 10% Outliers")
+makeplot("2011-03-06", "2011-03-27", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores10p.csv", "[IGNORE]", "RPCA Lambda Tuned to 10% Outliers")
+dev.off()
+
+
+
+
+
+
+
+
+
 if(F){
 pdf("results/sandy_coarse_lambda.pdf", 12, 8)
 #makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCA20_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.2")
@@ -389,7 +417,7 @@ dev.off()
 
 
 
-if(T){
+if(F){
 pdf("results/sandy_fine_lambda.pdf", 12, 8)
 makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA30_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.3")
 makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCA40_100000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda=0.4")

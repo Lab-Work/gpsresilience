@@ -351,39 +351,12 @@ if(__name__=="__main__"):
     #logMsg("Running raw analysis")
     #generateTimeSeriesLeave1("4year_features", use_link_db=True)
     
-    generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db="tmp_vectors.pickle", num_pcs=10000000,
+    generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=False, num_pcs=10000000,
                              robust=True, gamma="tune", perc_missing_allowed=.05,
                              pool=pool)
     
-
-    #for gamma in [.1,.3,.4,.5,.6,.7,.8,.9,1]:
-    #for gamma in [.5,.6]:
-    # for gamma in [.9, .91, .92, .93, .94, .95, .96, .97, .98, .99, .3, .4, .5, .6, .7, .8, 1]:
-    #     generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=True, robust=True, num_pcs=100000,
-    #                                     gamma=gamma, perc_missing_allowed=.05, make_zscore_vid=False, pool=pool)
-    
-    
-    #do_binary_search_on_gamma(0.679370, .05, "features_imb20_k10", use_link_db='tmp_vectors_Monday_4.pickle', num_pcs=100000,
-    #                                     perc_missing_allowed=.05, tol_perc=.0005, pool=pool)
-                                         
     """
-    logMsg("Running normalized analysis")
-    generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True)
-    
-    logMsg("Running weighted analysis")
-    generateTimeSeriesLeave1("4year_features", use_link_db=True, use_feature_weights=True, normalize=True)
-
-    
-    logMsg("Running normalized analysis")
-    generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True, consistent_threshold=20)
-    
-    logMsg("Running weighted analysis")
-    generateTimeSeriesLeave1("4year_features", use_link_db=True, use_feature_weights=True, normalize=True, consistent_threshold=20)
-
-    logMsg("Running normalized analysis")
-    generateTimeSeriesLeave1("4year_features", use_link_db=True, normalize=True, consistent_threshold=300)
-    
-    logMsg("Running weighted analysis")
-    generateTimeSeriesLeave1("4year_features", use_link_db=True, use_feature_weights=True, normalize=True, consistent_threshold=300)
+    generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db="tmp_vectors.pickle", num_pcs=10000000,
+                             robust=True, gamma="tune", perc_missing_allowed=.05,
+                             pool=pool)
     """
-

@@ -30,15 +30,17 @@ import csv
     # num_obs - a dictionary that maps (begin_node_id, end_node_id) --> total number of trips
 def compute_link_counts(dates):
     num_obs = defaultdict(float)
+    num_appearances = defaultdict(float)
     db_main.connect('db_functions/database.conf')
     for date in dates:
         curs = db_travel_times.get_travel_times_cursor(date)
         for [begin_node_id, end_node_id, date_time, travel_time, num_trips] in curs:
             num_obs[begin_node_id, end_node_id] += num_trips
+            num_appearances[begin_node_id, end_node_id] += 1
     
     db_main.close()
     
-    return num_obs
+    return num_obs, num_appearances
     
     
 
@@ -54,33 +56,38 @@ def compute_all_link_counts(dates, pool=DefaultPool()):
 
     # Merge the outputs by summing each link count
     merged_num_obs = defaultdict(float)
-    for num_obs in num_obs_list:
+    merged_count_obs = defaultdict(float)
+    for num_obs, num_appearances in num_obs_list:
         for key in num_obs:
             merged_num_obs[key] += num_obs[key]
+            merged_count_obs[key] += num_appearances[key]
 
     # Divide the sums by the total number of dates, in order to get the average
     for key in merged_num_obs:
         merged_num_obs[key] /= len(dates)
+        merged_count_obs[key] /= len(dates)
     
+
+    db_main.connect('db_functions/database.conf')
     logMsg("Creating")
     db_travel_times.create_link_counts_table()
     logMsg("Saving")
-    db_travel_times.save_link_counts(merged_num_obs)
+    db_travel_times.save_link_counts(merged_num_obs, merged_count_obs)
 
 # Determines the set of links that consistantly have many trips on them.  Specifically,
 # we want to keep links that have a high number of trips / hour.  These average link counts
 # come from the database table link_counts, which is created by compute_all_link_counts()
 # Params:
     # dates - the dates that we want to analyze for obtaining the consistent link set
-    # num_trips_threshold - only linkt hat have at least this many trips/hour will be kept
+    # perc_obs_threshold - only links that have a measurement at least this much of the time will be returned
 # Returns:
     # a list of links, which are represented by tuples (origin_node_id, connecting_node_id)
-def load_consistent_link_set(dates, num_trips_threshold):
+def load_consistent_link_set(dates, perc_obs_threshold):
     cur = db_travel_times.get_link_counts_cursor()
 
     consistent_links = [(begin_node_id, end_node_id) for
-        (begin_node_id, end_node_id, avg_num_trips) in cur
-        if avg_num_trips >= num_trips_threshold]
+        (begin_node_id, end_node_id, avg_num_trips, perc_obs) in cur
+        if perc_obs >= perc_obs_threshold]
     return consistent_links
 
 
@@ -238,15 +245,21 @@ def drawFigure(filename, road_map, num_obs):
 
 def test():
 
-    
+    print("Connecting")
     db_main.connect('db_functions/database.conf')
     
-    curs = db_main.execute("select distinct datetime from travel_times where datetime>= '2012-06-17' and datetime < '2012-06-24' order by datetime;")
+    print("Getting dates")
+    #curs = db_main.execute("select distinct datetime from travel_times where datetime>= '2012-06-17' and datetime < '2012-06-24' order by datetime;")
     #curs = db_main.execute("select distinct datetime from travel_times where datetime>= '2013-01-01' and datetime < '2013-01-02' order by datetime;")
-    
+    curs = db_main.execute("select distinct datetime from travel_times;")
+
     
     
     dates = [date for (date,) in curs]
     print ("Found %d dates" % len(dates))
     
-    get_consistent_link_set(dates)
+    compute_all_link_counts(dates)
+
+
+if(__name__=="__main__"):
+    test()

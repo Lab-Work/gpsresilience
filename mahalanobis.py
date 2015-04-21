@@ -420,7 +420,7 @@ def lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, keep_
 
 
 
-def tuneGamma(vectors, tol_perc, gamma_guess=1.0, target_c_perc=.05):
+def tuneGamma(vectors, tol_perc, gamma_guess=.5, target_c_perc=.10):
     data_matrix = column_stack(vectors)
     O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not
         
