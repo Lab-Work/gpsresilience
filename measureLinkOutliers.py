@@ -14,6 +14,7 @@ from tools import DefaultPool, splitList, logMsg, dateRange
 from datetime import datetime
 import cPickle as pickle
 
+from multiprocessing import Pool
 from collections import defaultdict
 from functools import partial
 import csv
@@ -143,7 +144,7 @@ def load_pace_vectors(dates, consistent_link_set):
 # Returns:
     # a list of Numpy column vectors, each element of these vectors represents
     # the travel time on a specific link of the road network
-def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
+def load_pace_data(perc_data_threshold=.95, pool=DefaultPool()):
     weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     
     # Connect to the database adn get hte available dates
@@ -157,7 +158,7 @@ def load_pace_data(num_trips_threshold=50, pool=DefaultPool()):
     #compute_all_link_counts(dates, pool=pool)
     
     logMsg("Loading consistent link set")
-    consistent_link_set = load_consistent_link_set(dates, num_trips_threshold)
+    consistent_link_set = load_consistent_link_set(dates, perc_data_threshold)
     
     db_main.close()
     
@@ -244,6 +245,7 @@ def drawFigure(filename, road_map, num_obs):
 
 
 def test():
+    pool = Pool(8)
 
     print("Connecting")
     db_main.connect('db_functions/database.conf')
@@ -258,7 +260,16 @@ def test():
     dates = [date for (date,) in curs]
     print ("Found %d dates" % len(dates))
     
-    compute_all_link_counts(dates)
+    compute_all_link_counts(dates, pool=pool)
+
+
+    print("Loading Pace Data")
+    data = load_pace_data(perc_data_threshold=.95, pool=pool)
+    with open('tmp_vectors.pickle', 'w') as f:
+        pickle.dump(data, f)
+
+
+
 
 
 if(__name__=="__main__"):
