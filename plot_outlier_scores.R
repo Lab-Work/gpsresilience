@@ -138,8 +138,9 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	#Create the plot of the outlier scores
 	#plot(s1_lnl, col="black", type="l", main=title, ylim = quantile(s1_lnl, c(.002,1)), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
 	ymax = quantile(s1$mahal50, .995)
-	plot(s1$mahal5, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	lines(s1$mahal10, col="darkred", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	ymax = max(s1$mahal10)
+	#plot(s1$mahal5, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	plot(s1$mahal10, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
 	#lines(s1$mahal20, col="darkgreen", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
 	#lines(s1$mahal50, col="darkblue", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
 
@@ -148,7 +149,7 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 
 	#Use a 5% quantile on the values from the ORIGINAL data to determine the threshold
 	#Draw a horizontal line for the threshold
-	abline(h=quantile(t1$mahal10, c(.90, .95, .99)), col="darkred", lty=2)
+	abline(h=quantile(t1$mahal10, c(.90, .95, .99)), col="black", lty=2)
 	#abline(h=quantile(t2_lnl, c(.90,.95, .99)), col="blue", lty=2)
 	  
 
@@ -167,7 +168,7 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	#legend("topright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
 	#	  lwd=c(2,2), bg="white")
 
-	legend("topright", legend=c("Mahalanobis 5pc", "Mahalanobis 10pc", "C != 0"), col=c("black", "darkred", 'green'), lwd=2, bg="white", cex=.8)
+	legend("topright", legend=c("Mahalanobis Distance", "C != 0"), col=c("black", 'green'), lwd=2, bg="white", cex=.8)
 }
 
 

@@ -6,7 +6,7 @@ Created on Tue Sep 30 19:28:30 2014
 """
 from tools import *
 from numpy import transpose, matrix, nonzero, ravel, diag, sqrt, where, square
-from numpy import zeros, multiply, column_stack
+from numpy import zeros, multiply, column_stack, arange
 from numpy.linalg import inv, eig
 
 from data_preprocessing import pca, scale_and_center
@@ -15,10 +15,10 @@ from pyrpca_core.op import opursuit
 from math import ceil
 
 
-from random import random
+from random import random, uniform
 
 
-
+import csv
 from sys import stdout
 
 
@@ -401,78 +401,6 @@ def computeMahalanobisDistances(vectors, independent=False, group_of_weights=Non
 
 
 
-def lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, keep_dims):
-    new_pcs = pcs[:,0:keep_dims]
-    new_rld = robust_lowdim_data[0:keep_dims,:]
-    
-    
-    vects = [new_rld[:,i] for i in xrange(new_rld.shape[1])]
-    stats = IndependentGroupedStats(vects) # Diagonal covariance assumption is valid since we did PCA
-    
-    corrupt_lowdim_data = new_pcs.transpose() * centered_corrupt
-    vects = [corrupt_lowdim_data[:,i] for i in xrange(corrupt_lowdim_data.shape[1])]
-    mahals = [stats.mahalanobisDistance(vect) for vect in vects]
-    
-    return mahals
-
-
-
-
-
-
-def tuneGamma(vectors, tol_perc, gamma_guess=.5, target_c_perc=.10):
-    data_matrix = column_stack(vectors)
-    O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not
-        
-         
-    SEARCH_RATE = 1.2
-    TOLERANCE = .01
-    
-    #Initially, we don't have any bounds on our search
-    lo_gamma = None
-    hi_gamma = None
-    gamma = gamma_guess
-    num_guesses = 0
-    while(True):
-        
-        
-        logMsg("BS: Trying gamma=%f" % gamma)
-        
-        # Use outlier pursuit to detect outliers
-        L,C,term,n_iter = opursuit(data_matrix, O, gamma, tol_perc=tol_perc)
-        c_vals = [(sum(square(C[:,i]))!=0)*1 for i in  xrange(C.shape[1])]
-        
-        c_perc = float(sum(c_vals)) / len(c_vals)
-        logMsg("BS: Fraction of outliers: %f" % c_perc)
-        num_guesses += 1
-        
-        # If we have found an acceptable gamma value, then stop
-        if(c_perc > target_c_perc - TOLERANCE and c_perc < target_c_perc + TOLERANCE):
-            break
-        
-        # Otherwise, update gamma and try again
-        if(c_perc < target_c_perc):
-            logMsg("BS: Decreasing gamma")
-            # Don't have enough outliers - decrease gamma
-            hi_gamma = gamma
-            if(lo_gamma==None):
-                gamma /= SEARCH_RATE
-            else:
-                gamma = (hi_gamma + lo_gamma) / 2
-        else:
-            logMsg("BS: Increasing gamma")
-            # Have too many outliers - increase gamma
-            lo_gamma = gamma
-            if(hi_gamma==None):
-                gamma *= SEARCH_RATE
-            else:
-                gamma = (hi_gamma + lo_gamma) / 2
-        
-        logMsg("BS: %s < gamma < %s" % (str(lo_gamma), str(hi_gamma)))
-    
-    logMsg ("BS: Chose gamma=%f , fraction of outliers=%f after %d attempts" % (gamma, c_perc, num_guesses))
-    return gamma,L,C
-
 
 
 # Compute the Mahalanobis Distances of a group of vectors in order to quantify
@@ -487,7 +415,11 @@ def computeMahalanobisDistances(vectors, robust=False, k=10, gamma=.5, tol_perc=
     if(robust):
         
         if(gamma=="tune"):
-            gamma,L,C = tuneGamma(vectors, tol_perc)
+            if(tol_perc=="tune"):
+                sweepGammaAndTol(vectors)
+                tol_perc,gamma,L,C = tuneGammaAndTol2(vectors)
+            else:
+                gamma,L,C = tuneGamma(vectors, tol_perc)
         else:
             data_matrix = column_stack(vectors)
             O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not

@@ -172,7 +172,7 @@ def pca(data_matrix, n_pcs):
     # compute the spectral decomposition
     eig_vals, eig_vectors = sorted_eig(cov_matrix)
     rank = sum(eig_vals > .0001)
-    print ("Nonzero eigvals: %d" % rank)
+    #print ("Nonzero eigvals: %d" % rank)
     trunc_eigs = eig_vals.tolist()[:(rank+5)]
     #print "Eigen vals: " + str(trunc_eigs)
     #eig_ratios = [trunc_eigs[i] / trunc_eigs[i+1] for i in range(len(trunc_eigs)-1)]

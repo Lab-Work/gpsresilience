@@ -251,9 +251,9 @@ def test():
     db_main.connect('db_functions/database.conf')
     
     print("Getting dates")
-    #curs = db_main.execute("select distinct datetime from travel_times where datetime>= '2012-06-17' and datetime < '2012-06-24' order by datetime;")
+    curs = db_main.execute("select distinct datetime from travel_times where datetime>= '2012-06-17' and datetime < '2012-06-24' order by datetime;")
     #curs = db_main.execute("select distinct datetime from travel_times where datetime>= '2013-01-01' and datetime < '2013-01-02' order by datetime;")
-    curs = db_main.execute("select distinct datetime from travel_times;")
+    #curs = db_main.execute("select distinct datetime from travel_times;")
 
     
     
