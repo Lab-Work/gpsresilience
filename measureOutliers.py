@@ -346,8 +346,8 @@ def do_binary_search_on_gamma(gamma_guess, target_c_perc, inDir, use_link_db=Fal
 if(__name__=="__main__"):
     
     
-    #pool = Pool(2)
-    pool = DefaultPool()
+    pool = Pool(8)
+    #pool = DefaultPool()
     #logMsg("Running raw analysis")
     #generateTimeSeriesLeave1("4year_features", use_link_db=True)
     
