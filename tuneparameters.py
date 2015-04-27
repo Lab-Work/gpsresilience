@@ -275,7 +275,8 @@ def tuneGammaAndTol2(vectors, gamma_guess=.3, tol_guess=10e-3, target_c_perc=.05
 
 
 def paramIterator(data_matrix, O):
-    tols = [1e-06, 5e-06, 1e-05, 5e-05, 1e-04, 5e-04, 1e-03, 5e-03]
+    #tols = [1e-06, 5e-06, 1e-05, 5e-05, 1e-04, 5e-04, 1e-03, 5e-03]
+    tols = arange(.001, .002, .0001)
     gammas = arange(.3,1.1,.01)
     
     for tol_perc in tols:
@@ -293,8 +294,8 @@ def tryParameters((data_matrix, O, tol_perc, gamma)):
     pcs, robust_lowdim_data = pca(centered_L, 100000)
     num_pca_dimensions = pcs.shape[1]
     
-    print([tol_perc, gamma, c_perc, num_pca_dimensions])
-    return [tol_perc, gamma, c_perc, num_pca_dimensions]
+    print([tol_perc, gamma, c_perc, num_pca_dimensions, n_iter])
+    return [tol_perc, gamma, c_perc, num_pca_dimensions, n_iter]
 
 
 
@@ -310,7 +311,7 @@ def sweepGammaAndTol(vectors, pool=DefaultPool()):
     
     with open('param_sweep.csv', 'w') as f:
         w = csv.writer(f)
-        w.writerow(['tol','gamma','outliers','rank'])
+        w.writerow(['tol','gamma','outliers','rank', 'iter'])
         for val in vals:
             w.writerow(val)
     
@@ -319,9 +320,10 @@ def sweepGammaAndTol(vectors, pool=DefaultPool()):
     
 
 if( __name__=="__main__"):
-    pool = Pool(8)
+    pool = Pool(2)
     #pool = DefaultPool()
-    use_link_db = 'tmp_vectors_Monday_12.pickle'
+    #use_link_db = 'tmp_vectors_Monday_12.pickle'
+    use_link_db=False    
     inDir = "features_imb20_k10"
     
     if(use_link_db):
