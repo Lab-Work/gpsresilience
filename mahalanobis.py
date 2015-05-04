@@ -10,7 +10,8 @@ from numpy import zeros, multiply, column_stack, arange
 from numpy.linalg import inv, eig
 
 from data_preprocessing import pca, scale_and_center
-from pyrpca_core.op import opursuit
+from op_modified import opursuit
+from tuneparameters import increasing_tolerance_search
 
 from math import ceil
 
@@ -402,6 +403,22 @@ def computeMahalanobisDistances(vectors, independent=False, group_of_weights=Non
 
 
 
+def lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, keep_dims):
+    new_pcs = pcs[:,0:keep_dims]
+    new_rld = robust_lowdim_data[0:keep_dims,:]
+    
+    
+    vects = [new_rld[:,i] for i in xrange(new_rld.shape[1])]
+    stats = IndependentGroupedStats(vects) # Diagonal covariance assumption is valid since we did PCA
+    
+    corrupt_lowdim_data = new_pcs.transpose() * centered_corrupt
+    vects = [corrupt_lowdim_data[:,i] for i in xrange(corrupt_lowdim_data.shape[1])]
+    mahals = [stats.mahalanobisDistance(vect) for vect in vects]
+    
+    return mahals
+
+
+
 
 # Compute the Mahalanobis Distances of a group of vectors in order to quantify
 # how unusual they are.  PCA approximation is used for high dimensional data,
@@ -415,11 +432,7 @@ def computeMahalanobisDistances(vectors, robust=False, k=10, gamma=.5, tol_perc=
     if(robust):
         
         if(gamma=="tune"):
-            if(tol_perc=="tune"):
-                sweepGammaAndTol(vectors)
-                tol_perc,gamma,L,C = tuneGammaAndTol2(vectors)
-            else:
-                gamma,L,C = tuneGamma(vectors, tol_perc)
+            gamma, tol_perc, num_guesses, hi_num_pcs, L, C = increasing_tolerance_search(vectors)
         else:
             data_matrix = column_stack(vectors)
             O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not
@@ -448,8 +461,12 @@ def computeMahalanobisDistances(vectors, robust=False, k=10, gamma=.5, tol_perc=
  
         c_vals = [(sum(square(C[:,i]))!=0)*1 for i in  xrange(C.shape[1])]
         gamma_vals = [gamma for i in xrange(C.shape[1])]
+        tol_vals = [tol_perc for i in xrange(C.shape[1])]
+        n_pca_d = [num_pca_dimensions for i in xrange(C.shape[1])]
+        n_guess = [num_guesses for i in xrange(C.shape[1])]
+        hi_pcs = [hi_num_pcs for i in xrange(C.shape[1])]
 
-        return mahals5, mahals10, mahals20, mahals50, c_vals, gamma_vals
+        return mahals5, mahals10, mahals20, mahals50, c_vals, gamma_vals, tol_vals, n_pca_d, n_guess, hi_pcs
     else:
         pcs, lowdim_data = pca(L, k)
         vects = [lowdim_data[:,i] for i in xrange(lowdim_data.shape[1])]

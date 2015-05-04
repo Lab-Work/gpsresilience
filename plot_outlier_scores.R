@@ -137,8 +137,8 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	
 	#Create the plot of the outlier scores
 	#plot(s1_lnl, col="black", type="l", main=title, ylim = quantile(s1_lnl, c(.002,1)), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	ymax = quantile(s1$mahal50, .995)
-	ymax = max(s1$mahal10)
+	ymax = quantile(s1$mahal10, .99)
+	#ymax = max(s1$mahal10)
 	#plot(s1$mahal5, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
 	plot(s1$mahal10, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
 	#lines(s1$mahal20, col="darkgreen", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
@@ -374,25 +374,21 @@ dateToRange = function(dateStr){
 
 #Make probability plots for several interesting events
 
-pdf( "results/sandy_fine_lambda_tuned_10p.pdf")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores_10p.csv", "[IGNORE]", "RPCA Lambda Tuned to 10% Outliers")
-makeplot("2011-03-06", "2011-03-27", "results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores_10p.csv", "[IGNORE]", "RPCA Lambda Tuned to 10% Outliers")
+#pdf( "results/sandy_fine_lambda_tuned_10p.pdf")
+#makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores_10p.csv", "[IGNORE]", "RPCA Lambda Tuned to 10% Outliers")
+#makeplot("2011-03-06", "2011-03-27", "results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores_10p.csv", "[IGNORE]", "RPCA Lambda Tuned to 10% Outliers")
+#dev.off()
+
+
+
+
+pdf( "results/sandy_coarse_lambda_tuned_5-10p.pdf")
+makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda Tuned to 5% Outliers")
+makeplot("2011-03-06", "2011-03-27", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda Tuned to 5% Outliers")
 dev.off()
 
 
 
-
-pdf( "results/sandy_coarse_lambda_tuned_5p.pdf")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores_5p.csv", "[IGNORE]", "RPCA Lambda Tuned to 5% Outliers")
-makeplot("2011-03-06", "2011-03-27", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores_5p.csv", "[IGNORE]", "RPCA Lambda Tuned to 5% Outliers")
-dev.off()
-
-
-
-pdf( "results/sandy_coarse_lambda_tuned_10p.pdf")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores10p.csv", "[IGNORE]", "RPCA Lambda Tuned to 10% Outliers")
-makeplot("2011-03-06", "2011-03-27", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores10p.csv", "[IGNORE]", "RPCA Lambda Tuned to 10% Outliers")
-dev.off()
 
 
 
