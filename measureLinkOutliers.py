@@ -12,7 +12,7 @@ from numpy import matrix, zeros
 from routing.Map import Map
 from tools import DefaultPool, splitList, logMsg, dateRange
 from datetime import datetime
-import cPickle as pickle
+import pickle
 
 from multiprocessing import Pool
 from collections import defaultdict
