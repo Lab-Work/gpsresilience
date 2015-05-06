@@ -12,14 +12,43 @@ from tools import *
 
 
 
+def get_event_properties(start_id, end_id, dates_list, mahal_list, 
+                         global_pace_list, expected_pace_list):
+    duration = end_id - start_id
+    
+    pace_devs = [global_pace_list[i] - expected_pace_list[i] for i in xrange(start_id, end_id)]
+    min_pace_dev = min(pace_devs)
+    max_pace_dev = max(pace_devs)
+    max_mahal = max(mahal_list[start_id:end_id])
+    start_date = dates_list[start_id]
+    end_date = dates_list[end_id - 1]
+    
+    return [start_date, end_date, duration, max_mahal, max_pace_dev, min_pace_dev]
+    
 
-def get_all_events(states, global_pace_timeseries, expected_pace_timeseries):
+
+def get_all_events(states, dates_list, mahal_list, global_pace_list, expected_pace_list):
     currently_in_event = False
+    events = []
     for i in xrange(len(states)):
         
         if(not currently_in_event and states[i]==1):
             event_start_id = i
             currently_in_event = True
+        
+        if(currently_in_event and states[i] == 0):
+            event_end_id = i
+            currently_in_event = False
+            
+            event_properties = get_event_properties(event_start_id, event_end_id,
+                                    dates_list, mahal_list, global_pace_list,
+                                    expected_pace_list)
+            
+            events.append(event_properties)
+            
+            
+            
+            
         
 
 

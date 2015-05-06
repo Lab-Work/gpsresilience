@@ -133,10 +133,11 @@ def tune_gamma_and_tol(vectors, gamma_guess=.5, tol_guess=1e-2,
     num_guesses = 0
     while(True):
         num_guesses += 1
-        logMsg("BS: Trying gamma=%f, tol=%f" % (gamma, tol_perc))
+        logMsg("BS (%d , %d): Trying gamma=%f, tol=%f" % (num_guesses, hi_target_num_pcs, gamma, tol_perc))
+        stdout.flush()
         
         try:
-            L,C,term,n_iter = opursuit(data_matrix, O, gamma, tol_perc=tol_perc, eps_ratio=20)
+            L,C,term,n_iter = opursuit(data_matrix, O, gamma, tol_perc=tol_perc, eps_ratio=30)
         
             
             
@@ -163,16 +164,16 @@ def tune_gamma_and_tol(vectors, gamma_guess=.5, tol_guess=1e-2,
             # gamma or tol
             
             if(num_pca_dimensions >= lo_target_num_pcs and c_perc >= lo_target_c_perc):
-                print("#rank too high and too many outliers - increase tolerance")
+                logMsg("#rank too high and too many outliers - increase tolerance")
                 lo_tol = tol_perc
             elif(num_pca_dimensions >= lo_target_num_pcs and c_perc <= lo_target_c_perc):
-                print("#rank too high and too few outliers - decrease gamma")
+                logMsg("#rank too high and too few outliers - decrease gamma")
                 hi_gamma = gamma
             elif(num_pca_dimensions <= lo_target_num_pcs and c_perc >= lo_target_c_perc):
-                print("#rank too low and too many outliers - increase gamma")
+                logMsg("#rank too low and too many outliers - increase gamma")
                 lo_gamma = gamma
             elif(num_pca_dimensions <= lo_target_num_pcs and c_perc <= lo_target_c_perc):
-                print("#rank too low and too few outliers - decrease tolerance")
+                logMsg("#rank too low and too few outliers - decrease tolerance")
                 hi_tol = tol_perc
     
             
@@ -182,7 +183,8 @@ def tune_gamma_and_tol(vectors, gamma_guess=.5, tol_guess=1e-2,
                                             SEARCH_RATE=5, BACKTRACK_PROB=BACKTRACK_PROB)
             
     
-            print("%s < gamma < %s  ,  %s < tol < %s" % tuple(map(str, [lo_gamma, hi_gamma, lo_tol,hi_tol])))
+            logMsg("%s < gamma < %s  ,  %s < tol < %s" % tuple(map(str, [lo_gamma, hi_gamma, lo_tol,hi_tol])))
+            stdout.flush()
 
         except Exception as e:
             logMsg(e.message)
@@ -193,6 +195,7 @@ def tune_gamma_and_tol(vectors, gamma_guess=.5, tol_guess=1e-2,
         if( (lo_tol !=None and hi_tol != None and hi_tol/lo_tol > .99 and hi_tol/lo_tol < 1.01)
             or (lo_gamma !=None and hi_gamma != None and hi_gamma/lo_gamma > .99 and hi_gamma/lo_gamma < 1.01)):
             print("----------------Got stuck")
+            stdout.flush()
             BACKTRACK_PROB = .3
             num_resets += 1
             
@@ -235,6 +238,7 @@ def increasing_tolerance_search(vectors):
         except ConvergenceException as e:
             num_guesses += e.num_guesses
             logMsg(" -------------------- Relaxing Condition ------------------------- ")
+            stdout.flush()
             hi_num_pcs += 5
     
     return gamma, tol, num_guesses, hi_num_pcs, L, C
