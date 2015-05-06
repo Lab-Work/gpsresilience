@@ -139,8 +139,8 @@ def tune_gamma_and_tol(vectors, gamma_guess=.5, tol_guess=1e-2,
         stdout.flush()
         
         try:
-            L,C,term,n_iter = opursuit(data_matrix, O, gamma, tol_perc=tol_perc, eps_ratio=30)
-        
+            #L,C,term,n_iter = opursuit(data_matrix, O, gamma, tol_perc=tol_perc, eps_ratio=30)
+            L,C,term,n_iter = multiple_op(data_matrix, O, gamma, tol_perc=tol_perc)
             
             
             #centered_L = scale_and_center(L, scale=False)

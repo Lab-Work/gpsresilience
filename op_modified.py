@@ -28,6 +28,7 @@ import sys
 import time
 import numpy as np
 from optparse import OptionParser
+from tools import logMsg
 
 def __iter_C(C, epsilon):
     """Helper for opursuit(...).
@@ -78,6 +79,15 @@ def obj_func(L, C, gamma):
     
     
     return nuc_norm + gamma*l12
+
+
+def constraint(L, C, M, tol_perc):
+    tol = tol_perc * np.linalg.norm(M, 'fro')
+    
+    err = np.linalg.norm(M - (L+C), 'fro')
+    
+    return err<= tol
+    
 
 
 
@@ -200,8 +210,37 @@ def opursuit(M,O=None,gamma=None, tol_perc = 1e-06, eps_ratio=2):
 
     L = L_new
     C = C_new
-    print obj_func(L,C, gamma)
+    #print obj_func(L,C, gamma)
     return (L, C, term_crit, k)
+
+def multiple_op(M,O=None,gamma=None, tol_perc = 1e-06):
+    best_eps = None
+    best_L = None
+    best_C = None
+    best_term_crit = None
+    best_k = None
+    best_obj = float('inf')
+    for eps_ratio in [2,5,10,20,30,50]:
+        logMsg("Trying eps=%d" % eps_ratio)
+        (L, C, term_crit, k) = opursuit(M,O=None,gamma=None, tol_perc = 1e-06, eps_ratio=eps_ratio)
+        
+        if(constraint(L,C,M, tol_perc)):
+            obj = obj_func(L,C,gamma)
+            if(obj < best_obj):
+                best_obj = obj
+                best_eps = eps_ratio
+                best_L = L
+                best_C = C
+                best_term_crit = term_crit
+                best_k = k
+        else:
+            logMsg("$$$$$$ Not satisfied at %d"% eps_ratio)
+    
+    logMsg("$$$$$$ Best eps: %d" % best_eps)
+    return best_L, best_C, best_term_crit, best_k
+        
+    
+
 
 
 def main(argv=None):
