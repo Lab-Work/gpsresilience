@@ -52,7 +52,8 @@ def fast_rank(A):
     # SEARCH_RATE - if one of the bounds are missing, guesses will extend in that direction
         # at a rate proportional to this
     # BACKTRACK_PROB - the probability of generating a point outside of the bounds
-def guess_param(current_val, lo_bound, hi_bound, SEARCH_RATE=5, BACKTRACK_PROB=.1):
+def guess_param(current_val, lo_bound, hi_bound, SEARCH_RATE=5, BACKTRACK_PROB=.1,
+                hard_lower_bound = .0001, hard_upper_bound = 10):
     lo_val = lo_bound
     hi_val = hi_bound
 
@@ -79,7 +80,8 @@ def guess_param(current_val, lo_bound, hi_bound, SEARCH_RATE=5, BACKTRACK_PROB=.
     
     # Draw a random guess from the distribution and update bounds if necessary
     current_val = normalvariate(mean, sd)
-    current_val = max(current_val, .0001)
+    current_val = max(current_val, hard_lower_bound)
+    current_val = min(current_val, hard_upper_bound)
     if(lo_bound!=None):
         lo_bound = min(lo_bound, current_val)
     if(hi_bound!=None):
@@ -180,7 +182,8 @@ def tune_gamma_and_tol(vectors, gamma_guess=.5, tol_guess=1e-2,
             (gamma, lo_gamma, hi_gamma) = guess_param(gamma, lo_gamma, hi_gamma,
                                             SEARCH_RATE=2, BACKTRACK_PROB=BACKTRACK_PROB)
             (tol_perc, lo_tol, hi_tol) = guess_param(tol_perc, lo_tol, hi_tol,
-                                            SEARCH_RATE=5, BACKTRACK_PROB=BACKTRACK_PROB)
+                                            SEARCH_RATE=5, BACKTRACK_PROB=BACKTRACK_PROB,
+                                            hard_upper_bound = .1)
             
     
             logMsg("%s < gamma < %s  ,  %s < tol < %s" % tuple(map(str, [lo_gamma, hi_gamma, lo_tol,hi_tol])))
@@ -228,7 +231,7 @@ def increasing_tolerance_search(vectors):
     while(True):
         try:
             gamma, tol, part_num_guesses, L, C = tune_gamma_and_tol(vectors,
-                                gamma_guess=1.0, tol_guess=1e-3,
+                                gamma_guess=1.0, tol_guess=1e-2,
                                 lo_target_c_perc=.05, hi_target_c_perc = .10,
                                 lo_target_num_pcs=10, hi_target_num_pcs = hi_num_pcs)
             
