@@ -229,7 +229,7 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
     
     # Compute all mahalanobis distances
     sorted_keys = sorted(pace_grouped)    
-    groups = [pace_grouped[key] for key in sorted_keys]    
+    groups = [(key,pace_grouped[key]) for key in sorted_keys]    
     outlier_scores = pool.map(mahalFunc, groups) #Run all of the groups, using as much parallel computing as possible
 
     logMsg("Merging output")

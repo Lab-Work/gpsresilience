@@ -11,8 +11,9 @@ RPCA - these are inputs to op_modified.opursuit().
 from tools import *
 from numpy import  square
 from numpy import column_stack, arange
+import numpy as np
 
-from data_preprocessing import pca, scale_and_center, remove_bad_dimensions_grouped
+from data_preprocessing import remove_bad_dimensions_grouped
 from op_modified import opursuit, obj_func
 
 
@@ -34,6 +35,10 @@ class ConvergenceException:
     pass
 
 
+def fast_rank(A):
+    u, s, v = np.linalg.svd(A)
+    rank = np.sum(s > .0001)
+    return rank
 
 
 
@@ -74,7 +79,7 @@ def guess_param(current_val, lo_bound, hi_bound, SEARCH_RATE=5, BACKTRACK_PROB=.
     
     # Draw a random guess from the distribution and update bounds if necessary
     current_val = normalvariate(mean, sd)
-    current_val = max(current_val, .00001)
+    current_val = max(current_val, .0001)
     if(lo_bound!=None):
         lo_bound = min(lo_bound, current_val)
     if(hi_bound!=None):
@@ -103,7 +108,7 @@ def guess_param(current_val, lo_bound, hi_bound, SEARCH_RATE=5, BACKTRACK_PROB=.
     # hi_target_c_perc - upper bound for the desired percentage of otuliers
     # lo_Target_num_pcs - lower bound for the desired rank of the data
     # hi_target_num_pcs - upper bound for the desired rank of the data
-def tune_gamma_and_tol(vectors, gamma_guess=.5, tol_guess=1e-3,
+def tune_gamma_and_tol(vectors, gamma_guess=.5, tol_guess=1e-2,
                         lo_target_c_perc=.04, hi_target_c_perc = .10,
                         lo_target_num_pcs=10, hi_target_num_pcs = 15):
                             
@@ -130,49 +135,59 @@ def tune_gamma_and_tol(vectors, gamma_guess=.5, tol_guess=1e-3,
         num_guesses += 1
         logMsg("BS: Trying gamma=%f, tol=%f" % (gamma, tol_perc))
         
-        L,C,term,n_iter = opursuit(data_matrix, O, gamma, tol_perc=tol_perc, eps_ratio=20)
+        try:
+            L,C,term,n_iter = opursuit(data_matrix, O, gamma, tol_perc=tol_perc, eps_ratio=20)
         
-        centered_L = scale_and_center(L, scale=False)
-        pcs, robust_lowdim_data = pca(centered_L, 100000)
-        num_pca_dimensions = pcs.shape[1]
-        
-        c_vals = [(sum(square(C[:,i]))!=0)*1 for i in  xrange(C.shape[1])]
-        c_perc = float(sum(c_vals)) / len(c_vals)
-        
-        print("pcs=%d, outliers=%f" % (num_pca_dimensions, c_perc))
-        
-        
-        # If we have found acceptable values, stop
-        if(c_perc >= lo_target_c_perc and c_perc <= hi_target_c_perc
-            and num_pca_dimensions >= lo_target_num_pcs
-            and num_pca_dimensions <= hi_target_num_pcs):
-            break
-        
-        # Otherwise, use our target values to figure out if we need to increase/decrease
-        # gamma or tol
-        
-        if(num_pca_dimensions >= lo_target_num_pcs and c_perc >= lo_target_c_perc):
-            print("#rank too high and too many outliers - increase tolerance")
-            lo_tol = tol_perc
-        elif(num_pca_dimensions >= lo_target_num_pcs and c_perc <= lo_target_c_perc):
-            print("#rank too high and too few outliers - decrease gamma")
-            hi_gamma = gamma
-        elif(num_pca_dimensions <= lo_target_num_pcs and c_perc >= lo_target_c_perc):
-            print("#rank too low and too many outliers - increase gamma")
-            lo_gamma = gamma
-        elif(num_pca_dimensions <= lo_target_num_pcs and c_perc <= lo_target_c_perc):
-            print("#rank too low and too few outliers - decrease tolerance")
-            hi_tol = tol_perc
+            
+            
+            #centered_L = scale_and_center(L, scale=False)
+            #pcs, robust_lowdim_data = pca(centered_L, 100000)
+            num_pca_dimensions = fast_rank(L)
+            
+            #otherrank = fast_rank(L)
+            #print ("RANK %d , %d" % (num_pca_dimensions, otherrank))
+            
+            c_vals = [(sum(square(C[:,i]))!=0)*1 for i in  xrange(C.shape[1])]
+            c_perc = float(sum(c_vals)) / len(c_vals)
+            
+            logMsg(">>>>>> pcs=%d, outliers=%f" % (num_pca_dimensions, c_perc))
+            
+            
+            # If we have found acceptable values, stop
+            if(c_perc >= lo_target_c_perc and c_perc <= hi_target_c_perc
+                and num_pca_dimensions >= lo_target_num_pcs
+                and num_pca_dimensions <= hi_target_num_pcs):
+                break
+            
+            # Otherwise, use our target values to figure out if we need to increase/decrease
+            # gamma or tol
+            
+            if(num_pca_dimensions >= lo_target_num_pcs and c_perc >= lo_target_c_perc):
+                print("#rank too high and too many outliers - increase tolerance")
+                lo_tol = tol_perc
+            elif(num_pca_dimensions >= lo_target_num_pcs and c_perc <= lo_target_c_perc):
+                print("#rank too high and too few outliers - decrease gamma")
+                hi_gamma = gamma
+            elif(num_pca_dimensions <= lo_target_num_pcs and c_perc >= lo_target_c_perc):
+                print("#rank too low and too many outliers - increase gamma")
+                lo_gamma = gamma
+            elif(num_pca_dimensions <= lo_target_num_pcs and c_perc <= lo_target_c_perc):
+                print("#rank too low and too few outliers - decrease tolerance")
+                hi_tol = tol_perc
+    
+            
+            (gamma, lo_gamma, hi_gamma) = guess_param(gamma, lo_gamma, hi_gamma,
+                                            SEARCH_RATE=2, BACKTRACK_PROB=BACKTRACK_PROB)
+            (tol_perc, lo_tol, hi_tol) = guess_param(tol_perc, lo_tol, hi_tol,
+                                            SEARCH_RATE=5, BACKTRACK_PROB=BACKTRACK_PROB)
+            
+    
+            print("%s < gamma < %s  ,  %s < tol < %s" % tuple(map(str, [lo_gamma, hi_gamma, lo_tol,hi_tol])))
 
-        
-        (gamma, lo_gamma, hi_gamma) = guess_param(gamma, lo_gamma, hi_gamma,
-                                        SEARCH_RATE=2, BACKTRACK_PROB=BACKTRACK_PROB)
-        (tol_perc, lo_tol, hi_tol) = guess_param(tol_perc, lo_tol, hi_tol,
-                                        SEARCH_RATE=5, BACKTRACK_PROB=BACKTRACK_PROB)
-        
-
-        print("%s < gamma < %s  ,  %s < tol < %s" % tuple(map(str, [lo_gamma, hi_gamma, lo_tol,hi_tol])))
-
+        except Exception as e:
+            logMsg(e.message)
+            lo_tol = .01
+            hi_tol = .01
         
         
         if( (lo_tol !=None and hi_tol != None and hi_tol/lo_tol > .99 and hi_tol/lo_tol < 1.01)
@@ -218,8 +233,8 @@ def increasing_tolerance_search(vectors):
             num_guesses += part_num_guesses
             break
         except ConvergenceException as e:
-            num_guesses == e.num_guesses
-            print(" -------------------- Relaxing Condition ------------------------- ")
+            num_guesses += e.num_guesses
+            logMsg(" -------------------- Relaxing Condition ------------------------- ")
             hi_num_pcs += 5
     
     return gamma, tol, num_guesses, hi_num_pcs, L, C

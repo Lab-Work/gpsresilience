@@ -29,7 +29,6 @@ import time
 import numpy as np
 from optparse import OptionParser
 
-
 def __iter_C(C, epsilon):
     """Helper for opursuit(...).
     """
@@ -146,7 +145,11 @@ def opursuit(M,O=None,gamma=None, tol_perc = 1e-06, eps_ratio=2):
     tol = tol_perc * np.linalg.norm(M, 'fro')
 
     stopped = False
+    MAX_ITER = 100
     while not stopped:
+        
+        if k > MAX_ITER:
+            raise Exception('Failed to converge when gamma=%f, tol=%f' % (gamma, tol_perc))
         # note: YL, YC, GL, GC all change with k
 
         

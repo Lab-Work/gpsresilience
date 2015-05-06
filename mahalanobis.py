@@ -428,11 +428,13 @@ def lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, keep_
     # robust - True if RPCA via OP is desired
     # k - Number of PCs to use in PCA
     # gamma - gamma parameter for RPCA
-def computeMahalanobisDistances(vectors, robust=False, k=10, gamma=.5, tol_perc=1e-06):
+def computeMahalanobisDistances((key,vectors), robust=False, k=10, gamma=.5, tol_perc=1e-06):
     if(robust):
         
         if(gamma=="tune"):
             gamma, tol_perc, num_guesses, hi_num_pcs, L, C = increasing_tolerance_search(vectors)
+            (weekday, hour) = key
+            logMsg("Successfully tuned %s @ %d  after %d guesses : gamma=%f, tol=%f"%(weekday, hour, num_guesses, gamma, tol_perc))
         else:
             data_matrix = column_stack(vectors)
             O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not

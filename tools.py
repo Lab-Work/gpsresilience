@@ -11,14 +11,17 @@ import math
 import re
 #import psycopg2
 from numpy.linalg import norm
+import os
 
 program_start = datetime.now()
-#A convenient print statement for long runs - also includes a timestamp at the beginning of the message
+#A convenient print statement for long runs - also includes a timestamp and the
+#process ID at the beginning of the message
 #Arguments:
 	#msg - a string to be printed
 def logMsg(msg):
+	pid = os.getpid()
 	td = datetime.now() - program_start
-	print "[" + str(td) + "]  " + str(msg)
+	print "[%s]<%d>%s" % (str(td), pid, str(msg))
 
 
 #A print statement intended to log the percentage of completion of some task with many iterations
