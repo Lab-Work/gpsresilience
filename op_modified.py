@@ -252,6 +252,7 @@ def multiple_op(M,O=None,gamma=None, tol_perc = 1e-06):
                 tmp = obj_func(L, C, gamma)
         except:
             pass
+        sys.stdout.flush()
     
     logMsg("$$$$$$ Best eps: %d" % best_eps)
     sys.stdout.flush()
