@@ -45,6 +45,8 @@ def get_all_events(states, dates_list, mahal_list, global_pace_list, expected_pa
                                     expected_pace_list)
             
             events.append(event_properties)
+    
+    return events
             
             
             
