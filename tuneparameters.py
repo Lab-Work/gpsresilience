@@ -231,7 +231,7 @@ def increasing_tolerance_search(vectors):
     while(True):
         try:
             gamma, tol, part_num_guesses, L, C = tune_gamma_and_tol(vectors,
-                                gamma_guess=1.0, tol_guess=1e-2,
+                                gamma_guess=1.0, tol_guess=.05,
                                 lo_target_c_perc=.05, hi_target_c_perc = .10,
                                 lo_target_num_pcs=10, hi_target_num_pcs = hi_num_pcs)
             
