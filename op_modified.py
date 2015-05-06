@@ -77,16 +77,23 @@ def obj_func(L, C, gamma):
     for i in xrange(0,cols):
         l12 += np.sqrt(sum(np.square(C[:,i])))
     
+    obj = nuc_norm + gamma*l12
     
-    return nuc_norm + gamma*l12
+    return obj
 
 
-def constraint(L, C, M, tol_perc):
-    tol = tol_perc * np.linalg.norm(M, 'fro')
+def compute_err(L,C,M,O):
+    m_diff = np.multiply(M - (L+C), O)
+    err = np.linalg.norm((m_diff), 'fro')
     
-    err = np.linalg.norm(M - (L+C), 'fro')
-    
-    return err<= tol
+    err_perc = err / np.linalg.norm(M, 'fro')
+    return err_perc
+
+
+
+def constraint(L, C, M, O, tol_perc):
+    err_perc = compute_err(L,C,M,O)
+    return err_perc <= tol_perc
     
 
 
@@ -192,7 +199,12 @@ def opursuit(M,O=None,gamma=None, tol_perc = 1e-06, eps_ratio=2):
         fro_part1 = np.linalg.norm(S_C,ord='fro')
         term_crit = fro_part0**2 + fro_part1**2
 
-        if term_crit <= tol**2:
+        obj = obj_func(L_new, C_new, gamma)
+        const = compute_err(L_new,C_new,M,O)
+        #logMsg("%d) obj=%f, const=%f" % (k, obj, const))
+
+        #if term_crit <= tol**2:
+        if const < tol_perc:        
             stopped = True
         else:
             # L_{k-1} = L_{k}, L_{k} = L_new
@@ -221,22 +233,28 @@ def multiple_op(M,O=None,gamma=None, tol_perc = 1e-06):
     best_k = None
     best_obj = float('inf')
     for eps_ratio in [2,5,10,20,30,50]:
-        logMsg("Trying eps=%d" % eps_ratio)
-        (L, C, term_crit, k) = opursuit(M,O=None,gamma=None, tol_perc = 1e-06, eps_ratio=eps_ratio)
-        
-        if(constraint(L,C,M, tol_perc)):
+        try:
+            logMsg("Trying eps=%d" % eps_ratio)
+            (L, C, term_crit, k) = opursuit(M,O=O,gamma=gamma, tol_perc = tol_perc, eps_ratio=eps_ratio)
             obj = obj_func(L,C,gamma)
-            if(obj < best_obj):
-                best_obj = obj
-                best_eps = eps_ratio
-                best_L = L
-                best_C = C
-                best_term_crit = term_crit
-                best_k = k
-        else:
-            logMsg("$$$$$$ Not satisfied at %d"% eps_ratio)
+            logMsg("%f after %d"% (obj,k))
+            if(constraint(L,C,M, O, tol_perc)):
+                obj = obj_func(L,C,gamma)
+                if(obj < best_obj):
+                    best_obj = obj
+                    best_eps = eps_ratio
+                    best_L = L
+                    best_C = C
+                    best_term_crit = term_crit
+                    best_k = k
+            else:
+                logMsg("$$$$$$ Not satisfied at %d"% eps_ratio)
+                tmp = obj_func(L, C, gamma)
+        except:
+            pass
     
     logMsg("$$$$$$ Best eps: %d" % best_eps)
+    sys.stdout.flush()
     return best_L, best_C, best_term_crit, best_k
         
     

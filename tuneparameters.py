@@ -14,7 +14,7 @@ from numpy import column_stack, arange
 import numpy as np
 
 from data_preprocessing import remove_bad_dimensions_grouped
-from op_modified import opursuit, obj_func
+from op_modified import opursuit, multiple_op, obj_func
 
 
 
