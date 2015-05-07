@@ -199,12 +199,10 @@ def opursuit(M,O=None,gamma=None, tol_perc = 1e-06, eps_ratio=2):
         fro_part1 = np.linalg.norm(S_C,ord='fro')
         term_crit = fro_part0**2 + fro_part1**2
 
-        obj = obj_func(L_new, C_new, gamma)
-        const = compute_err(L_new,C_new,M,O)
+        current_err_perc = compute_err(L_new,C_new,M,O)
         #logMsg("%d) obj=%f, const=%f" % (k, obj, const))
 
-        #if term_crit <= tol**2:
-        if const < tol_perc:        
+        if term_crit <= tol**2 and current_err_perc < tol_perc:    
             stopped = True
         else:
             # L_{k-1} = L_{k}, L_{k} = L_new

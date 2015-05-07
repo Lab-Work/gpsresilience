@@ -183,7 +183,7 @@ def tune_gamma_and_tol(vectors, gamma_guess=.5, tol_guess=1e-2,
                                             SEARCH_RATE=2, BACKTRACK_PROB=BACKTRACK_PROB)
             (tol_perc, lo_tol, hi_tol) = guess_param(tol_perc, lo_tol, hi_tol,
                                             SEARCH_RATE=5, BACKTRACK_PROB=BACKTRACK_PROB,
-                                            hard_upper_bound = .1)
+                                            hard_upper_bound = 1.0)
             
     
             logMsg("%s < gamma < %s  ,  %s < tol < %s" % tuple(map(str, [lo_gamma, hi_gamma, lo_tol,hi_tol])))
@@ -231,7 +231,7 @@ def increasing_tolerance_search(vectors):
     while(True):
         try:
             gamma, tol, part_num_guesses, L, C = tune_gamma_and_tol(vectors,
-                                gamma_guess=1.0, tol_guess=.05,
+                                gamma_guess=.75, tol_guess=.35,
                                 lo_target_c_perc=.05, hi_target_c_perc = .10,
                                 lo_target_num_pcs=10, hi_target_num_pcs = hi_num_pcs)
             

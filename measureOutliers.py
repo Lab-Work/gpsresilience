@@ -300,7 +300,7 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
 if(__name__=="__main__"):
     
     
-    pool = Pool(4)
+    pool = Pool(8)
     #pool = DefaultPool()
     #logMsg("Running raw analysis")
     #generateTimeSeriesLeave1("4year_features", use_link_db=True)
@@ -315,6 +315,7 @@ if(__name__=="__main__"):
     generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db='tmp_vectors.pickle', num_pcs=10000000,
                              robust=True, gamma="tune",  tol_perc="tune", perc_missing_allowed=.05,
                              pool=pool)
+    
     
     
     """
