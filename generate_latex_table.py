@@ -6,27 +6,29 @@ Created on Wed Mar 18 16:54:50 2015
 """
 import csv
 
-def parseTable(filename):
+def parseTable(filename, max_events=10):
     with open(filename, 'r') as f:
         w = csv.reader(f)
         w.next()
         s = """\\begin{table}
 \\centering
-\\def\\arraystretch{2.5}
-\\begin{tabular}{ccccc}
-\\toprule
-Event           & Start Time          & \\shortstack{Duration \\\\ (hours)} & \shortstack{Hours \\\\ Above \\\\ Thresh}    & \\shortstack{Max \\\\ (min/mi)}   \\\\
-"""
-
-        
-        for [event,start_date,end_date,max_mahal,mahal_quant,duration,hours_above_thresh,max_pace_dev, min_pace_dev,worst_trip] in w:
-            [d1,d2] = start_date.split(" ")            
-            s += "%s & \\shortstack{%s \\\\ %s} & %s & %s & %s \\\\ \n" % (event, d1, d2, duration, hours_above_thresh, max_pace_dev)
-        
-        s += """\\bottomrule
-\\end{tabular}
 \\caption{blahblahblahcaption}
 \\label{table:events}
+\\begin{tabular}{ccccc}
+\\hline
+Event           & Start Time          & \\shortstack{Duration \\\\ (hours)}  & \\shortstack{Max \\\\ (min/mi)}   \\\\
+"""
+
+        i = 0
+        for [event,start_date,end_date,duration,max_mahal,max_pace_dev,min_pace_dev] in w:
+            [d1,d2] = start_date.split(" ")            
+            s += "%s & \\shortstack{%s \\\\ %s} & %s & %s \\\\ \n" % (event, d1, d2, duration, max_pace_dev)
+            i += 1
+            if(i>= max_events):
+                break
+        
+        s += """\\hline
+\\end{tabular}
 \\end{table}
         """        
         
@@ -34,7 +36,7 @@ Event           & Start Time          & \\shortstack{Duration \\\\ (hours)} & \s
             
 
 if(__name__=="__main__"):
-    parseTable("results/events_labeled.csv")
+    parseTable("results/coarse_events.csv")
     print
     print
     print"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
@@ -42,5 +44,5 @@ if(__name__=="__main__"):
     print"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
     print
     print
-    parseTable("results/link_20_normalize_events_labeled.csv")
+    parseTable("results/fine_events.csv")
     

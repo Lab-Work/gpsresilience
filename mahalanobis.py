@@ -418,6 +418,20 @@ def lowdim_mahalanobis_distance(pcs, robust_lowdim_data, centered_corrupt, keep_
     return mahals
 
 
+def get_zscore_matrix(M,L):
+    # Compute z-scores by scaling and centering the records
+    # scaling and centering is done with respect to L matrix instead of M, so
+    # outliers are discarded
+    z_matrix = scale_and_center(M, reference_matrix=L, scale=True)
+    
+    # The entries of M that are 0 will be incorrect, since these are missing data
+    # replace those zscores with 0 to stay consistent
+    missing_data_ids = where(M==0)
+    z_matrix[missing_data_ids] = 0
+    
+    return z_matrix
+
+
 
 
 # Compute the Mahalanobis Distances of a group of vectors in order to quantify
@@ -433,6 +447,7 @@ def computeMahalanobisDistances((key,vectors), robust=False, k=10, gamma=.5, tol
         
         if(gamma=="tune"):
             gamma, tol_perc, num_guesses, hi_num_pcs, L, C = increasing_tolerance_search(vectors)
+            data_matrix = column_stack(vectors)
             (weekday, hour) = key
             logMsg("Successfully tuned %s @ %d  after %d guesses : gamma=%f, tol=%f"%(weekday, hour, num_guesses, gamma, tol_perc))
         else:
@@ -467,8 +482,11 @@ def computeMahalanobisDistances((key,vectors), robust=False, k=10, gamma=.5, tol
         n_pca_d = [num_pca_dimensions for i in xrange(C.shape[1])]
         n_guess = [num_guesses for i in xrange(C.shape[1])]
         hi_pcs = [hi_num_pcs for i in xrange(C.shape[1])]
+        
+        z_matrix = get_zscore_matrix(data_matrix,L)
+        z_scores = [z_matrix[:,i] for i in xrange(C.shape[1])]
 
-        return mahals5, mahals10, mahals20, mahals50, c_vals, gamma_vals, tol_vals, n_pca_d, n_guess, hi_pcs
+        return mahals5, mahals10, mahals20, mahals50, c_vals, z_scores, gamma_vals, tol_vals, n_pca_d, n_guess, hi_pcs
     else:
         pcs, lowdim_data = pca(L, k)
         vects = [lowdim_data[:,i] for i in xrange(lowdim_data.shape[1])]

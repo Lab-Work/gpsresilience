@@ -3,20 +3,26 @@
 
 
 #These control the scope of the legend for standardized pace vectors
-min_z = -5
+min_z = -2
 max_z = 5
 
 #These control the scope of the legend for mean pace vector
-min_pace = 100
-max_pace = 600
+min_pace = 2
+max_pace = 7
+
+
 
 
 #Read the mean pace vectors
-t = read.csv("4year_features/pace_features.csv")
+t = read.csv("features_imb20_k10/pace_features.csv")
 t$Date=as.character(t$Date)
 
+
+
+
+
 #Read the standardized pace vectors
-zt = read.csv("results/zscore.csv")
+zt = read.csv("results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_zscore.csv")
 zt$Date=as.character(zt$Date)
 
 #Create the color gradient ramp
@@ -58,12 +64,12 @@ shortenDates = function(dates){
 addLegend = function(type, crush=F){
 
 	#Set up the margins
-	par(mar=c(1.8,0,1,0))
+	par(mar=c(.1,0,1,0))
 	
 
 	if(crush){
-		titleSize=1.5
-		axisSize=1.5
+		titleSize=.8
+		axisSize=1
 	}
 	else{
 		titleSize=.8
@@ -72,38 +78,41 @@ addLegend = function(type, crush=F){
 	
 	#Set up the plots - the type determines the title and the range of interesting values (lo, hi)
 	if(type=="absolute"){
-		plot(0,0, type="n", xlim=c(1,200), ylim=c(-1,1), xaxt="n", yaxt="n", , bty="n", cex.main=titleSize, main="Pace (min / mi)")
-		lo = 0
-		hi = 600
+		lo = min_pace
+		hi = max_pace
+		value_granularity=15
+		legend_granularity=1
+		plot(0,0, type="n", xlim=c(lo,hi), ylim=c(0,1), xaxt="n", yaxt="n", , bty="n", cex.main=titleSize, main="Pace (min / mi)")
 	}
 	else if(type=="standardized"){
-		plot(0,0, type="n", xlim=c(1,200), ylim=c(-1,1), xaxt="n", yaxt="n", , bty="n", cex.main=titleSize, main="Standardized Pace (Z-Score)")
 		lo = min_z
 		hi = max_z
+		value_granularity=10
+		legend_granularity=1
+		plot(0,0, type="n", xlim=c(lo,hi), ylim=c(0,1), xaxt="n", yaxt="n", , bty="n", cex.main=titleSize, main="Standardized Pace (Z-Score)")
 	}
 
 
 
-	#We are going to draw 201 colored boxes with colors corresponding to values in (lo, hi)
-        vals = seq(lo, hi, length=201)
-        
-       	#Scale the values between 0 and 1 so they can be converted to colors
-        mycols = rgb(jet.colors(linearScale(vals, lo,hi))/256)
+
+	vals = seq(lo, hi, 1/value_granularity)
+	cvals = linearScale(vals, lo, hi)
+	mycols = rgb(jet.colors(cvals)/255)
+	a = c((0:((hi - lo)/legend_granularity))*value_granularity*legend_granularity + 1)
+	print(vals)
+	print(a)
+
         
         #y is constant
-        yvals = rep(0,200)
+        yvals = rep(.6,length(vals))
         
         #Draw the squares
-	points(1:200, yvals, col=mycols, pch=15, cex=2)
+	points(vals, yvals, col=mycols, pch=15, cex=2)
 	
-	a = (0:10)*20 + 1
-	#Add the axis every 20 values
-	if(type=="absolute"){
-	  axis(1, at=a, labels=round(vals[a]/60, 2), cex.axis=axisSize)
-	}
-	else if(type=="standardized"){
-	   axis(1, at=a, labels=round(vals[a], 2), cex.axis=axisSize)
-	}
+
+	#Add the ticks and axis labels
+	segments(x0=vals[a],y0=.4,x1=vals[a],y1=.8, lwd=2)
+	text(x=vals[a],y=.2,labels=vals[a], cex=.8)
 	
 }
 
@@ -117,12 +126,12 @@ addTags = function(t){
 	#heights = minv + (maxv-minv)*hvals
 	#segments(i,0,i,hvals, col="grey", lwd=3, lty=2)
 	
-	minv = 17
-	maxv=26
+	minv = 11
+	maxv=16
 	
 	#2012-10-29,20:00:00,Sandy hits land,Atlantic City NJ
 	i = match(TRUE, t$Date=="2012-10-29" & t$Hour==20)
-	height = minv + (maxv-minv)*.45
+	height = minv + (maxv-minv)*.50
 	segments(i,0,i,height, col="grey", lwd=3, lty=1)
 	text(i, height, "Sandy Hits Land", cex=.8)
 	
@@ -134,13 +143,13 @@ addTags = function(t){
 	
 	#2012-10-31,14:00:00,Partial metro service (commuter trains) resumes.,Grand Central & Penn 
 	i = match(TRUE, t$Date=="2012-10-31" & t$Hour==14)
-	height = minv + (maxv-minv)*.4
+	height = minv + (maxv-minv)*.60
 	segments(i,0,i,height, col="grey", lwd=3, lty=1)
 	text(i, height, "Partial Metro\nService Resumes", cex=.8)
 	
 	#2012-11-01,?,HOV3+ carpooling restrictions begin.,Cars entering Manhattan between 6am and 12am. Except for GW bridge
-	i = match(TRUE, t$Date=="2012-11-01" & t$Hour==0)
-	height = minv + (maxv-minv)*.1
+	i = match(TRUE, t$Date=="2012-11-01" & t$Hour==2)
+	height = minv + (maxv-minv)*.04
 	segments(i,0,i,height, col="grey", lwd=3, lty=1)
 	text(i, height, "Carpool Restrictions", cex=.8)
 	
@@ -162,6 +171,40 @@ addTags = function(t){
 	
 }
 
+
+
+addColorRow = function(vals, height, type){
+        #Iterate through columns (dimensions of mean pace vector)
+        #Each column corresponds to a trip type (E->M for example)
+
+		
+		#Symbol types and line types for each dot
+		#Default is squares with no lines
+		mypch = rep(15, length(vals))
+		mylwd = rep(0, length(vals))
+        
+	  	
+	  	#convert values into colors - range depends on plot type
+		if(type=="absolute"){
+			mycols = rgb(jet.colors(linearScale(vals/60, min_pace, max_pace))/256)
+		}
+		else if(type=="standardized"){
+			mycols = rgb(jet.colors(linearScale(vals, min_z, max_z))/256)
+	  	}
+	  
+	  #Missing data (values of zero) are plotted as black Xs
+	  mycols[vals==0] = "black"
+	  mypch[vals==0] = 4
+	  mylwd[vals==0] = 1.1
+	  
+
+	  
+	  #Draw the points
+	  points(x=1:length(vals), y=rep(height, length(vals)), col = mycols,
+		pch=mypch, lwd=mylwd, cex=.8)
+
+}
+
 #Plots pace vectors for a period of time.  The dimensions are stacked vertically and the pace/zscore is indicated by the color
 #Arguments:
 	#startDate - the beginning of the desired time range to plot
@@ -178,13 +221,13 @@ makeMainPlot = function(startDate, endDate, mainTitle, type, crush=F){
 		extra_height=0		#Don't leave room for tags
 		pt_size = .8		#Control size of plotted points
 		region_label_size = 2	#Control size of y axis label
-		mainTitleSize=2
+		mainTitleSize=1
 		mainTitle = ""		#No main title
 		s = t[t$Date>=startDate & t$Date <= endDate,]
 	}
 	else{
 		par(mar=c(3,4,2,.4))	#Large margins
-		extra_height=5		#Leave 5 rows empty for tags
+		extra_height=6		#Leave 5 rows empty for tags
 		pt_size = 1		#Control size of y axis label
 		mainTitleSize=1
 		s = zt[zt$Date>=startDate & zt$Date <= endDate,]
@@ -192,42 +235,24 @@ makeMainPlot = function(startDate, endDate, mainTitle, type, crush=F){
 	}
 	
 	#Create the plot
-	plot(0,0, type="n", xlim=c(7,(24*7 - 7)), ylim=c(1,16+extra_height),
+	plot(0,0, type="n", xlim=c(7,(24*7 - 7)), ylim=c(1,10+extra_height),
 		xaxt="n", xlab="", yaxt="n", ylab="", main=mainTitle, cex.main=mainTitleSize)
 
+	# Add the necessary rows
+	addColorRow(s$r0.r0, 10, type)
+	addColorRow(s$r6.r6, 9, type)
+	addColorRow(s$r4.r4, 8, type)
+	addColorRow(s$r7.r7, 7, type)
+	addColorRow(s$r6.r4, 6, type)
+	addColorRow(s$r4.r6, 5, type)
+	addColorRow(s$r0.r1, 4, type)
+	addColorRow(s$r1.r0, 3, type)
+	addColorRow(s$r0.r7, 2, type)
+	addColorRow(s$r7.r0, 1, type)
+
+	abline(h=6.5, lwd=2)
 	
-        #Iterate through columns (dimensions of mean pace vector)
-        #Each column corresponds to a trip type (E->M for example)
-        for(colid in 4:ncol(s)){
-	  	
-	  	#Grab the column
-		vals = s[,colid]
-		
-		#Symbol types and line types for each dot
-		#Default is squares with no lines
-		mypch = rep(15, length(vals))
-		mylwd = rep(0, length(vals))
-        
-	  	
-	  	#convert values into colors - range depends on plot type
-		if(type=="absolute"){
-			mycols = rgb(jet.colors(linearScale(vals, min_pace, max_pace))/256)
-		}
-		else if(type=="standardized"){
-			mycols = rgb(jet.colors(linearScale(vals, min_z, max_z))/256)
-	  	}
-	  
-	  #Missing data (values of zero) are plotted as black Xs
-	  mycols[vals==0] = "black"
-	  mypch[vals==0] = 4
-	  mylwd[vals==0] = 1.1
-	  
-	  #Y values depend on column id
-	  yvals = rep(20 - colid, nrow(t))
-	  
-	  #Draw the points
-	  points(x=1:nrow(t), y=yvals, col = mycols, pch=mypch, lwd=mylwd, cex=pt_size)
-	}
+
 	
 	#Add tags if necessary
 	addTags(s)
@@ -249,14 +274,12 @@ makeMainPlot = function(startDate, endDate, mainTitle, type, crush=F){
 	
 	
 	#Zones = Y axis labels
-	zones = c("E-E","E-U","E-M","E-L","U-E","U-U","U-M","U-L","M-E","M-U","M-M","M-L","L-E","L-U","L-M","L-L")
-	axis(2, at=1:16, labels=rev(zones), las=1, cex.axis=.7)
+	zones = rev(c("0-0","6-6","4-4","1-1","6-4","4-6","0-1","1-0","0-7","7-0"))
+	axis(2, at=10:1, labels=rev(zones), las=1, cex.axis=.7)
 	
 	
 	#Draw horizontal lines between each group of rows (a group is a set of zones with the same origin)
-	for (i in 1:4){
-		abline(h=i*4+.5)
-	}
+
 	
 	#Draw vertical lines on the midnights
 	segments(a,0,a,16.5)
@@ -275,7 +298,7 @@ plotTimeSpan = function(startDate, endDate, mainTitle, type){
 	print(mainTitle)
 	
 	#Setup the layout - a tall graph on top and a short graph on the bottom for the legend
-	layout(matrix(c(1,2),2), heights=c(10,2))
+	layout(matrix(c(1,2),2), heights=c(10,3))
 	
 	#Make the main plot in the first plot
 	makeMainPlot(startDate, endDate, mainTitle, type)
@@ -314,7 +337,7 @@ plot3Weeks = function(weekDates, type){
 	#type - either "absolute" or "standardized"
 plot1Week = function(weekDates, type){
 	#Layout contains 4 plots - 3 big ones for the main plots, and 1 small one for the legend
-	layout(matrix(1:2,2), heights=c(6, 2))
+	layout(matrix(1:2,2), heights=c(2, 1))
 	
 	#Add the first 3 main plots
 	makeMainPlot(weekDates[1], weekDates[2], weekDates[1], type, crush=T)
@@ -324,7 +347,7 @@ plot1Week = function(weekDates, type){
 	addLegend(type, crush=T)
 	
 	#Add an overall title
-	title(main="Mean Pace Vector - Three Typical Weeks", outer=T, cex.main=2)
+	title(main="Mean Pace Vector - Three Typical Weeks", outer=T, cex.main=1)
 }
 
 
@@ -333,10 +356,12 @@ plot1Week = function(weekDates, type){
 ###########################################################################################
 
 
-#Create standardized pace vector plot for week of Hurricane Sandy
-svg("results/color_standardized_pace_over_time.svg", 10, 5)
-plotTimeSpan("2012-10-28", "2012-11-04", "Standardized Pace (min/mi) Over Time - Week of Hurricane Sandy", "standardized")
-dev.off()
+if(T){
+	#Create standardized pace vector plot for week of Hurricane Sandy
+	pdf("results/color_standardized_pace_over_time.pdf", 10, 3)
+	plotTimeSpan("2012-10-28", "2012-11-04", "Standardized Pace (min/mi) Over Time - Week of Hurricane Sandy", "standardized")
+	dev.off()
+}
 
 
 #Optional - make plot for whole year (relatively slow)
@@ -360,19 +385,27 @@ if(plotWholeYear){
 }
 
 
-#Make plot of mean pace vector for "3 typical weeks"
-#pdf("results/color_pace_3weeks.pdf", 5, 5)
-svg("results/color_pace_3weeks.svg", 10, 5)
-weeks=c('2010-04-04', '2010-04-11', '2010-04-18', '2010-04-25')
-par(oma=c(1,1,2,1))
+if(F){
+	#Make plot of mean pace vector for "3 typical weeks"
+	#pdf("results/color_pace_3weeks.pdf", 5, 5)
+	svg("results/color_pace_3weeks.svg", 10, 5)
+	weeks=c('2010-04-04', '2010-04-11', '2010-04-18', '2010-04-25')
+	par(oma=c(1,1,2,1))
 
-plot3Weeks(weeks, 'absolute')
+	plot3Weeks(weeks, 'absolute')
+	dev.off()
+}
+
+pdf("results/color_pace_1week.pdf", 10, 2)
+weeks=c('2010-04-04', '2010-04-11')
+par(oma=c(.1,.1,.7,.1))
+plot1Week(weeks, 'absolute')
 dev.off()
 
 
-pdf("results/color_pace_1week.pdf", 10, 3)
-weeks=c('2010-04-04', '2010-04-11')
-par(oma=c(1,1,2,1))
+pdf("results/color_sandy_1week.pdf", 10, 2)
+weeks=c("2012-10-28", "2012-11-04")
+par(oma=c(.1,.1,.7,.1))
 plot1Week(weeks, 'absolute')
 dev.off()
 

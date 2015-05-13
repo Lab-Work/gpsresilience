@@ -20,7 +20,9 @@ from tools import *
 from measureLinkOutliers import load_pace_data, load_from_file
 from sys import stdout
 
-NUM_PROCESSORS = 8
+import pickle
+
+NUM_PROCESSORS = 2
 
 
 #Reads time-series pace data from a file, and sorts it into a convenient format.
@@ -157,13 +159,13 @@ def reduceOutlierScores(scores, sorted_keys, dates_grouped):
     
     all_entries = []
     for i in xrange(len(sorted_keys)):
-        this_hour, this_weekday = sorted_keys[i]
-        mahals5, mahals10, mahals20, mahals50, c_vals, gamma_vals, tol_vals, n_pca_d, n_guess, hi_pcs = scores[i]
+        this_weekday, this_hour = sorted_keys[i]
+        mahals5, mahals10, mahals20, mahals50, c_vals, z_scores, gamma_vals, tol_vals, n_pca_d, n_guess, hi_pcs = scores[i]
         for j in xrange(len(mahals5)):
             this_date = dates_grouped[sorted_keys[i]][j]
             entry = (this_date, this_hour, this_weekday, mahals5[j], mahals10[j],
-                    mahals20[j], mahals50[j], c_vals[j], gamma_vals[j], tol_vals[j],
-                    n_pca_d[j], n_guess[j], hi_pcs[j])
+                    mahals20[j], mahals50[j], c_vals[j], z_scores[j], gamma_vals[j],
+                    tol_vals[j], n_pca_d[j], n_guess[j], hi_pcs[j])
             all_entries.append(entry)
     
     all_entries.sort()
@@ -194,6 +196,7 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
     else:
         file_prefix = "coarse_"
         (pace_timeseries, pace_grouped, dates_grouped, trip_names) = readPaceData(inDir)
+        
 
 
     if(robust):
@@ -208,8 +211,8 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
 
     #pace_grouped = preprocess_data(pace_grouped, num_pcs,
     #                               perc_missing_allowed=perc_missing_allowed)
-    pace_grouped = remove_bad_dimensions_grouped(pace_grouped, perc_missing_allowed)
-
+    pace_grouped, trip_names = remove_bad_dimensions_grouped(pace_grouped, trip_names, perc_missing_allowed)
+    logMsg(trip_names)
 
 
     #Also get global pace information
@@ -244,7 +247,7 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
                           'mahal50' ,'c_val', 'gamma', 'tol', 'pca_dim', 'num_guess',
                           'hi_pcs', 'global_pace', 'expected_pace', 'sd_pace'])
     
-    for (date, hour, weekday, mahal5, mahal10, mahal20, mahal50, c_val, gamma, tol,
+    for (date, hour, weekday, mahal5, mahal10, mahal20, mahal50, c_val, z_scores, gamma, tol,
          n_pca_dim, n_guess, hi_pcs) in sorted(entries):
         try:
             gl_pace = global_pace_timeseries[(date, hour, weekday)]
@@ -261,28 +264,38 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
 
 
     all_cvals = [c_val for(date, hour, weekday, mahal5, mahal10, mahal20, mahal50,
-                    c_val, gamma, tol,n_pca_dim, n_guess, hi_pcs) in sorted(entries)]
+                    c_val, z_scores, gamma, tol,n_pca_dim, n_guess, hi_pcs) in sorted(entries)]
 
-    """
-    zscoreWriter= csv.writer(open("results/%szscore.csv"%file_prefix, "w"))
+    
+    zscoreWriter= csv.writer(open("results/%s_zscore.csv"%file_prefix, "w"))
     zscoreWriter.writerow(['Date','Hour','Weekday'] + trip_names)
     #Output zscores to file
-    for (date, hour, weekday) in sorted(zscores):
-        std_vect = zscores[date, hour, weekday]
+    for (date, hour, weekday, mahal5, mahal10, mahal20, mahal50, c_val, z_scores, gamma, tol,
+         n_pca_dim, n_guess, hi_pcs) in sorted(entries):
+        std_vect = z_scores
         zscoreWriter.writerow([date, hour, weekday] + ravel(std_vect).tolist())
-    """
+    
     
 
     #def make_video(tmp_folder, filename_base, pool=DefaultPool(), dates=None, speed_dicts=None)
     if(make_zscore_vid):
         logMsg("Making speed dicts")
         #zscore_list = [zscores[key] for key in sorted(zscores)]
-        date_list = dates = [datetime(2012,10,21) + timedelta(hours=1)*x for x in range(168*3)]
-        weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']        
-        zscore_list = [zscores[str(d.date()), d.hour, weekday_names[d.weekday()]] for d in date_list]
-
+        date_list = []
+        zscore_list = []
+        
+        for (date, hour, weekday, mahal5, mahal10, mahal20, mahal50, c_val, z_scores, gamma, tol,
+             n_pca_dim, n_guess, hi_pcs) in sorted(entries):
+            if(date >= '2012-10-21' and date < '2012-11-11'):
+                dt = datetime.strptime(date, '%Y-%m-%d') + timedelta(hours=int(hour))
+                date_list.append(dt)
+                zscore_list.append(z_scores)
+                
         speed_dicts = build_speed_dicts(consistent_link_set, zscore_list)
-        logMsg("Making video")
+        logMsg("Making video with %d frames" % len(zscore_list))
+        
+        with open('tmp_zscores.pickle', 'w') as f:
+            pickle.dump((date_list, speed_dicts), f)
         make_video("tmp_vid", "zscore_vid", pool=pool, dates=date_list, speed_dicts=speed_dicts)
         
         
@@ -314,7 +327,7 @@ if(__name__=="__main__"):
     
     generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db='tmp_vectors.pickle', num_pcs=10000000,
                              robust=True, gamma="tune",  tol_perc="tune", perc_missing_allowed=.05,
-                             pool=pool)
+                             pool=pool, make_zscore_vid=True)
     
     
     

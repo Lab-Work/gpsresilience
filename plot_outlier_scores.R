@@ -137,19 +137,21 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	
 	#Create the plot of the outlier scores
 	#plot(s1_lnl, col="black", type="l", main=title, ylim = quantile(s1_lnl, c(.002,1)), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	ymax = quantile(t1$mahal10, .95)*5
+	ymax = 9.5
 	#ymax = max(s1$mahal10)
 	#plot(s1$mahal5, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
-	plot(s1$mahal10, col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
+	plot(log(s1$mahal10), col="black", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1, yaxt="n")
 	#lines(s1$mahal20, col="darkgreen", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
 	#lines(s1$mahal50, col="darkblue", type="l", main=title, ylim = c(0,ymax), xaxt="n", xlab="", ylab="Mahalanobis Distance", lwd=1)
 
-	lines(s1$c_val*ymax/4, col="green", type="s", lwd=1)
+	lines(s1$c_val*ymax/4, col="green", type="l", lwd=1)
+	lines(s1$state*ymax/8, col="blue", type="s", lwd=2)
+
 	#lines(s2_lnl, col="blue", type="l", lwd=1)
 
 	#Use a 5% quantile on the values from the ORIGINAL data to determine the threshold
 	#Draw a horizontal line for the threshold
-	abline(h=quantile(t1$mahal10, c(.90, .95, .99)), col="black", lty=2)
+	abline(h=log(quantile(t1$mahal10, .95)), col="black", lty=2, lwd=2)
 	#abline(h=quantile(t2_lnl, c(.90,.95, .99)), col="blue", lty=2)
 	  
 
@@ -158,7 +160,11 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	short_dates = shortenDates(s1$date)
 	axis(1, at=ids, labels=short_dates[ids], cex.axis=.75)
 	  
-	  
+	#Add logarithmic y-axis
+	a = c(1,10,100,1000,10000)
+	axis(2, at=log(a), labels=a, cex.axis=.75)
+
+
 	#Draw thin lines to divide days, and thick lines to divide weeks  
 	abline(v=ids)
 	ids2 = (0:3)*24*7 + 1
@@ -168,7 +174,7 @@ addOutlierPlot = function(s1, t1, s2, t2, title, type="mahal"){
 	#legend("topright", legend=c("M(t)", "Threshold"), col=c("black", "red"),
 	#	  lwd=c(2,2), bg="white")
 
-	legend("topright", legend=c("Mahalanobis Distance", "C != 0"), col=c("black", 'green'), lwd=2, bg="white", cex=.8)
+	legend("topright", legend=c("Mahalanobis Distance", "C != 0", "Event Detected"), col=c("black", 'green', 'blue'), lwd=2, bg="white", cex=.8)
 }
 
 
@@ -204,15 +210,15 @@ makeplot = function(startDate, endDate, inFile, outFile, title){
 	if(outFile!='[IGNORE]'){
 		pdf(outFile, 12, 8)
 	}
-	par(mfrow=c(2,1), mar=c(3,5,2,1))
-
+	#par(mfrow=c(2,1), mar=c(3,5,2,1))
+	par(mar=c(3,5,2,1))
   
 
 	#Add the probability plot	
 	addOutlierPlot(s1, t1, s2, t2, title)
  
 	#Add the pace plot
-	addPacePlot(s1)
+	#addPacePlot(s1)
 
 	if(outFile!='[IGNORE]'){
   		dev.off()
@@ -382,17 +388,40 @@ dateToRange = function(dateStr){
 
 
 
+show_events = rbind(
+c("2012-10-21", "2012-11-11", "Sandy")
+#c("2010-12-19", "2011-01-09",  "Blizzard"),
+#c("2011-08-21", "2011-09-11", "Irene"),
+#c("2012-11-04", "2012-11-25",  "November"),
+#c("2011-11-13", "2011-12-04",  "Thanksgiving"),
+#c("2013-10-06", "2013-10-27",  "October"),
+#c("2011-08-28", "2011-09-18",  "September"),
+#c("2011-03-06", "2011-03-27",  "Typical Week")
+)
 
-pdf( "results/sandy_fine_lambda_tuned_5-10p.pdf")
-makeplot("2012-10-21", "2012-11-11", "results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda Tuned to 5% Outliers")
-makeplot("2011-03-06", "2011-03-27", "results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda Tuned to 5% Outliers")
+
+
+
+print(show_events)
+
+
+pdf( "results/sandy_coarse_lambda_tuned_5-10p.pdf", 10, 3)
+for(i in 1:nrow(show_events)){
+	makeplot(show_events[i,1], show_events[i,2], "results/coarse_events_scores.csv", "[IGNORE]", show_events[i,3])
+}
 dev.off()
 
 
-pdf( "results/sandy_coarse_lambda_tuned_5-10p.pdf")
-makeplot("2012-10-21", "2012-11-11", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda Tuned to 5% Outliers")
-makeplot("2011-03-06", "2011-03-27", "results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv", "[IGNORE]", "RPCA Lambda Tuned to 5% Outliers")
+
+pdf( "results/sandy_fine_lambda_tuned_5-10p.pdf", 10, 3)
+
+for(i in 1:nrow(show_events)){
+	makeplot(show_events[i,1], show_events[i,2], "results/fine_events_scores.csv", "[IGNORE]", show_events[i,3])
+}
+
 dev.off()
+
+
 
 
 

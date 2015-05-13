@@ -27,7 +27,6 @@ from sys import stdout
 from multiprocessing import Pool
 
 from measureLinkOutliers import load_pace_data, load_from_file
-from measureOutliers import readPaceData
 
 class ConvergenceException:
     def __init__(self, num_guesses):
@@ -230,10 +229,17 @@ def increasing_tolerance_search(vectors):
     num_guesses = 0
     while(True):
         try:
+
             gamma, tol, part_num_guesses, L, C = tune_gamma_and_tol(vectors,
                                 gamma_guess=.75, tol_guess=.35,
                                 lo_target_c_perc=.05, hi_target_c_perc = .10,
                                 lo_target_num_pcs=10, hi_target_num_pcs = hi_num_pcs)
+            """
+            gamma, tol, part_num_guesses, L, C = tune_gamma_and_tol(vectors,
+                                gamma_guess=.75, tol_guess=.35,
+                                lo_target_c_perc=.00, hi_target_c_perc = 100,
+                                lo_target_num_pcs=1, hi_target_num_pcs = 200)
+            """
             
 
             num_guesses += part_num_guesses
@@ -321,37 +327,4 @@ def compare_eps(vectors):
 
     
 
-if( __name__=="__main__"):
-    pool = Pool(2)
-    #pool = DefaultPool()
-    #use_link_db = 'tmp_vectors_Monday_12.pickle'
-    use_link_db=False    
-    inDir = "features_imb20_k10"
-    
-    if(use_link_db):
-        pace_timeseries, pace_grouped, weights_grouped, dates_grouped, trip_names, consistent_link_set = load_from_file(use_link_db)
-    else:
-        (pace_timeseries, pace_grouped, dates_grouped, trip_names) = readPaceData(inDir)
-    
-    pace_grouped = remove_bad_dimensions_grouped(pace_grouped, .05)
-    
-    #vectors = pace_grouped[('Tuesday', 22)]
-    # ('Tuesday', 12)
-    # ('Friday', 0)
-    #sweepGammaAndTol(vectors, pool)   
-    #quit()
-    
-    
-    key = pace_grouped.keys()[1]
-    for key in pace_grouped:
-        #key = ('Wednesday', 23)
-        #sweepGammaAndTol(pace_grouped[key], pool)
-        print("**************************************")
-        print key
-        increasing_tolerance_search(pace_grouped[key])
-        #compare_eps(pace_grouped[key])
-        print
-        print
-    
-    pool.close()
 

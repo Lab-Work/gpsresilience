@@ -48,7 +48,7 @@ def remove_bad_dimensions(data_matrix, perc_missing_allowed=.01):
     n_vars, n_obs = smaller_data_matrix.shape
     print("Full data matrix after cutting: %d x %d" % (n_vars, n_obs))
     stdout.flush()
-    return smaller_data_matrix
+    return smaller_data_matrix, good_dims
 
 
 # A wrapper for remove_bad_dimensions which works on groups of vectors, but removes
@@ -61,14 +61,14 @@ def remove_bad_dimensions(data_matrix, perc_missing_allowed=.01):
 # Returns:
     # new_vectors_grouped - a dictionary which has the same structure as vectors_grouped
         # but the vectors are smaller
-def remove_bad_dimensions_grouped(vectors_grouped, perc_missing_allowed=.01):
+def remove_bad_dimensions_grouped(vectors_grouped, trip_names, perc_missing_allowed=.01):
     # First, concatenate all pace vectors into one big data matrix (in a reasonable order)
     sorted_keys = sorted(vectors_grouped)
     all_vects = [vect for key in sorted_keys for vect in vectors_grouped[key]]
     big_matrix = column_stack(all_vects)
     
     # Now, remove dimensions that have missing data from the big matrix
-    new_big_matrix = remove_bad_dimensions(big_matrix, perc_missing_allowed)
+    new_big_matrix, good_dims = remove_bad_dimensions(big_matrix, perc_missing_allowed)
     
     # Finally, reconstruct a dictionary which has the same structure as vectors_grouped,
     # but uses the columns of new_big_matrix instead of big_matrix.  We have to be
@@ -83,7 +83,12 @@ def remove_bad_dimensions_grouped(vectors_grouped, perc_missing_allowed=.01):
         
         i = end
     
-    return new_vectors_grouped
+    if(trip_names!=None):
+        new_trip_names = [trip_names[j] for j in range(len(good_dims)) if good_dims[j]]
+    else:
+        new_trip_names = ['missing' for j in range(len(good_dims)) if good_dims[j]]
+    
+    return new_vectors_grouped, new_trip_names
         
     
     
@@ -136,9 +141,8 @@ def scale_and_center(data_matrix, reference_matrix=None, scale=False):
     
     # Also scale each variable by its standard deviation, if desired    
         # Var[X] = sum( (X - mean_x)^2) / N
-        # Var[X] = sum( (X - 0)^2) / N  # since we already subtracted the mean
     if(scale):
-        sums_of_squares = square(reference_matrix).sum(axis=1)
+        sums_of_squares = square(reference_matrix - row_avgs).sum(axis=1)
         row_sds = sqrt(sums_of_squares / n_obs)
         new_matrix /= row_sds
     
