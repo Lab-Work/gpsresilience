@@ -326,8 +326,8 @@ if(__name__=="__main__"):
      
     
     generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db='tmp_vectors.pickle', num_pcs=10000000,
-                             robust=True, gamma="tune",  tol_perc="tune", perc_missing_allowed=.05,
-                             pool=pool, make_zscore_vid=True)
+                             robust=False, gamma="tune",  tol_perc="tune", perc_missing_allowed=.05,
+                             pool=pool, make_zscore_vid=False)
     
     
     

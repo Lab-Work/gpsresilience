@@ -443,15 +443,14 @@ def get_zscore_matrix(M,L):
     # k - Number of PCs to use in PCA
     # gamma - gamma parameter for RPCA
 def computeMahalanobisDistances((key,vectors), robust=False, k=10, gamma=.5, tol_perc=1e-06):
+    data_matrix = column_stack(vectors)
     if(robust):
         
         if(gamma=="tune"):
             gamma, tol_perc, num_guesses, hi_num_pcs, L, C = increasing_tolerance_search(vectors)
-            data_matrix = column_stack(vectors)
             (weekday, hour) = key
             logMsg("Successfully tuned %s @ %d  after %d guesses : gamma=%f, tol=%f"%(weekday, hour, num_guesses, gamma, tol_perc))
         else:
-            data_matrix = column_stack(vectors)
             O = (data_matrix!=0)*1 # Observation matrix - 1 where we have data, 0 where we do not
              # Use outlier pursuit to get robust low-rank approximation of data
             L,C,term,n_iter = opursuit(data_matrix, O, gamma, tol_perc=tol_perc)
@@ -488,13 +487,27 @@ def computeMahalanobisDistances((key,vectors), robust=False, k=10, gamma=.5, tol
 
         return mahals5, mahals10, mahals20, mahals50, c_vals, z_scores, gamma_vals, tol_vals, n_pca_d, n_guess, hi_pcs
     else:
-        pcs, lowdim_data = pca(L, k)
-        vects = [lowdim_data[:,i] for i in xrange(lowdim_data.shape[1])]
-        stats = IndependentGroupedStats(vects) # Diagonal covariance assumption is valid since we did PCA
-
-        mahals = [stats.generateLeave1stats(vect).mahalanobisDistance(vect) for vect in vects]
+        pcs, lowdim_data = pca(data_matrix, k)
         
-        return mahals
+        centered_data = scale_and_center(data_matrix, scale=False)
+        mahals5 = lowdim_mahalanobis_distance(pcs, lowdim_data, centered_data, 5)
+        mahals10 = lowdim_mahalanobis_distance(pcs, lowdim_data, centered_data, 10)
+        mahals20 = lowdim_mahalanobis_distance(pcs, lowdim_data, centered_data, 20)
+        mahals50 = lowdim_mahalanobis_distance(pcs, lowdim_data, centered_data, 50)
+
+    
+        c_vals = [0 for i in  xrange(C.shape[1])]
+        gamma_vals = [0 for i in xrange(C.shape[1])]
+        tol_vals = [0 for i in xrange(C.shape[1])]
+        n_pca_d = [0 for i in xrange(C.shape[1])]
+        n_guess = [0 for i in xrange(C.shape[1])]
+        hi_pcs = [0 for i in xrange(C.shape[1])]
+        
+        z_matrix = get_zscore_matrix(data_matrix,data_matrix)
+        z_scores = [z_matrix[:,i] for i in xrange(C.shape[1])]
+      
+        return mahals5, mahals10, mahals20, mahals50, c_vals, z_scores, gamma_vals, tol_vals, n_pca_d, n_guess, hi_pcs
+
         
 
 
