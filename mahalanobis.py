@@ -496,15 +496,15 @@ def computeMahalanobisDistances((key,vectors), robust=False, k=10, gamma=.5, tol
         mahals50 = lowdim_mahalanobis_distance(pcs, lowdim_data, centered_data, 50)
 
     
-        c_vals = [0 for i in  xrange(C.shape[1])]
-        gamma_vals = [0 for i in xrange(C.shape[1])]
-        tol_vals = [0 for i in xrange(C.shape[1])]
-        n_pca_d = [0 for i in xrange(C.shape[1])]
-        n_guess = [0 for i in xrange(C.shape[1])]
-        hi_pcs = [0 for i in xrange(C.shape[1])]
+        c_vals = [0 for i in  xrange(data_matrix.shape[1])]
+        gamma_vals = [0 for i in xrange(data_matrix.shape[1])]
+        tol_vals = [0 for i in xrange(data_matrix.shape[1])]
+        n_pca_d = [0 for i in xrange(data_matrix.shape[1])]
+        n_guess = [0 for i in xrange(data_matrix.shape[1])]
+        hi_pcs = [0 for i in xrange(data_matrix.shape[1])]
         
         z_matrix = get_zscore_matrix(data_matrix,data_matrix)
-        z_scores = [z_matrix[:,i] for i in xrange(C.shape[1])]
+        z_scores = [z_matrix[:,i] for i in xrange(data_matrix.shape[1])]
       
         return mahals5, mahals10, mahals20, mahals50, c_vals, z_scores, gamma_vals, tol_vals, n_pca_d, n_guess, hi_pcs
 
