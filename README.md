@@ -71,12 +71,13 @@ The code needs to be run in a specific order, since the results of each step dep
 
 ###**Link-Level Method**
 This method identifies travel times on each link of the road network.  Then, the periodic patterns are used to identify outliers and the events that cause them.  The code is run as follows:
+
 1. Run **taxisim.mpi_parallel.test_traffic_estimation.run_test()**.  This produces the link-level traffic estimates and saves them into a PostgreSQL database.  This is a heavy computation if it is applied to many hours of traffic data.  On our dataset, it took roughly 1-2 hours to compute the estimates for one hour of traffic data.  Since we applied it to a 4-year dataset, supercomputing resources were required.  This is why the code is an mpi program instead of a standard program.  If you just need the traffic estimates for NYC, and you don't want to re-run this step, you can just download the data [here](www.ihaventuploadedthedatayet.com).
 2. Run **measureLinkOutliers.py** .  This takes the traffic estimates from the previous section and identifies the links that consistently have trips on them (i.e. they don't have very much missing data).  The traffic estimates on these links only are placed into Numpy vectors - one vector for each hour of estimates, each dimension corresponds to a different link.  These vectors are organised into groups based on the weekly periodic pattern.  There are **24x7=168** groups.  This organised data is dumped into a large pickle file called **tmp_vectors.pickle** file so it can be re-used later without accessing the database.
 3. Run **measureOutliers.py** .  Inside the main section <code>if(__name__=="__main__"):</code> , ensure that the lines labled "This performs the link-level analysis" are uncommented. This portion of the analysis examines each group independently and uses Robust PCA to identify outliers.  Each hour is assigned outlier scores, based on their similarity to other hours in the same group.  These results are saved in a file such as **link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv**.
 4. Run **hmm_event_detection.py** .  This takes the outlier scores from the previous section and identifies windows of time with lots of outliers, and tags those as events.  It produces two files as output:
-    i. **fine_events_scores.csv** - This is identical to **link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv** except that it contains an additional column with the binary event flags.  I.e. 1 for event, 0 for not event.
-    ii. **fine_events.csv** - A list of the detected events and their dates, durations, peak behavior, etc.
+  - **fine_events_scores.csv** - This is identical to **link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv** except that it contains an additional column with the binary event flags.  I.e. 1 for event, 0 for not event.
+  - **fine_events.csv** - A list of the detected events and their dates, durations, peak behavior, etc.
 
 ###**Origin-Destination Method**
 
