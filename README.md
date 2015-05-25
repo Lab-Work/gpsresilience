@@ -3,8 +3,13 @@ Taxi GPS Data as Pervasive City-Scale Resilience Sensors
 
 ##1)Overview
 
-The code in this repository can be used to reproduce the results of paper "Using coarse GPS data to quantify city-scale transportation system resilience to extreme events" by Brian Donovan and Dan Work.  The purpose of this analysis is to extract meaningful information from large-scale taxi data, which can be downloaded [here](http://publish.illinois.edu/dbwork/open-data/).
+The code in this repository can be used to reproduce the results of paper "Using coarse GPS data to quantify city-scale transportation system resilience to extreme events" by Brian Donovan and Dan Work.  The purpose of this analysis is to extract meaningful information from large-scale taxi data, which can be downloaded [here](http://publish.illinois.edu/dbwork/open-data/).  Technically, the analysis processes the GPS data into two types of traffic estimates:
+1. Origin-Destination Paces.  This represents the expected pace (minutes/mile) of vehicles between pairs of regions in the city.
+2. Link-Level paces.  This represents the expected pace of vehicles driving over individual links in the road network.
 
+Either of these traffic estimates can be used to detect outliers, using Robust PCA.  Further analysis identifies windows of time, or 'events' where there are a lot of outliers, using a hidden Markov model.
+
+This library relies heavily on the [taxisim](https://github.com/Lab-Work/taxisim) library.  The **taxisim** library should be downloaded and placed inside the **gpsresilience** folder.  The recommended setup to instead place the **taxisim** folder next to the **gpsresilience** folder, then create a symbolic link to it inside the **gpsrresilience folder.
 
 ##2)License
 
@@ -26,9 +31,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 
 
-##3)How to Run the Code
-
-###**Step 1 - Download the data**
+##3)How to Download the data
 
 The dataset used in our analysis is made publicly available [here](http://publish.illinois.edu/dbwork/open-data/).  This dataset contains record of almost 700 million taxi trips in New York City between 2010 and 2013 (inclusive).  Included information:
 - GPS coordinates for pickup and dropoff
@@ -41,6 +44,7 @@ All of this data should be downloaded and placed in a folder called "new_chron".
 <code>
 .
 |-- gpsresilience
+|   |-- taxisim/
 |   |-- eventDetection.py
 |   |-- extractRegionFeaturesParallel.py
 |   |-- ...
@@ -62,89 +66,19 @@ All of this data should be downloaded and placed in a folder called "new_chron".
 </code>
 </pre>
  
- 
- 
- 
- 
- 
- 
- 
-###**Step 2 - Feature Histograms**
+##4) How to run the Code
+The code needs to be run in a specific order, since the results of each step depend on the results of the previous step.  This section describes the proper order.  Since two methods of analysis are possible (link-level and origin-destination), they are described separately.
 
-**This step is optional**.  If you don't want feature histograms, you can skip to step 3.  The goal of this is the describe the distributions of features like distance, pace, winding factor, etc... across ALL trips. Analysis of these distributions helped us choose some of the error thresholds used in the data filtering step (see step 3).  To build the histograms, run:
+###**Link-Level Method**
+This method identifies travel times on each link of the road network.  Then, the periodic patterns are used to identify outliers and the events that cause them.  The code is run as follows:
+1. Run **taxisim.mpi_parallel.test_traffic_estimation.run_test()**.  This produces the link-level traffic estimates and saves them into a PostgreSQL database.  This is a heavy computation if it is applied to many hours of traffic data.  On our dataset, it took roughly 1-2 hours to compute the estimates for one hour of traffic data.  Since we applied it to a 4-year dataset, supercomputing resources were required.  This is why the code is an mpi program instead of a standard program.  If you just need the traffic estimates for NYC, and you don't want to re-run this step, you can just download the data [here](www.ihaventuploadedthedatayet.com).
+2. Run **measureLinkOutliers.py** .  This takes the traffic estimates from the previous section and identifies the links that consistently have trips on them (i.e. they don't have very much missing data).  The traffic estimates on these links only are placed into Numpy vectors - one vector for each hour of estimates, each dimension corresponds to a different link.  These vectors are organised into groups based on the weekly periodic pattern.  There are **24x7=168** groups.  This organised data is dumped into a large pickle file called **tmp_vectors.pickle** file so it can be re-used later without accessing the database.
+3. Run **measureOutliers.py** .  Inside the main section <code>if(__name__=="__main__"):</code> , ensure that the lines labled "This performs the link-level analysis" are uncommented. This portion of the analysis examines each group independently and uses Robust PCA to identify outliers.  Each hour is assigned outlier scores, based on their similarity to other hours in the same group.  These results are saved in a file such as **link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv**.
+4. Run **hmm_event_detection.py** .  This takes the outlier scores from the previous section and identifies windows of time with lots of outliers, and tags those as events.  It produces two files as output:
+    i. **fine_events_scores.csv** - This is identical to **link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv** except that it contains an additional column with the binary event flags.  I.e. 1 for event, 0 for not event.
+    ii. **fine_events.csv** - A list of the detected events and their dates, durations, peak behavior, etc.
 
-<code>
-python featureHistograms.py
-</code>
-
-This takes a pretty long time to run because it has to process every single trip in the dataset.  On our 8-core 2.4 GHz machine, it took about 1 hour, using all cores.  Change NUM\_PROCESSORS to the appropriate value for your machine.
-
-Once the process is complete, it generates a folder called "hist\_results", which contains several CSV files.  These files describe the histograms of various features.  To visualize the results, run:
-
-<code>
-Rscript plotHists2.R
-</code>
+###**Origin-Destination Method**
 
 
 
-
-
-
-
-###**Step 3 - Data Filtering and Feature Extraction**
-
-In this step, the data is filtered and preprocessed into meaningful features, all at once.  The general idea is to break the city into 4 regions, given by 4regions_boundary.png:
-
-![tmp](4regions_boundary.png)
-
-Note that the analysis literally uses this image to define boundaries, so the regions can be changed by simply editing the image.  Trips between the 4 regions (so there are 16 types of trips) are described with features such as the count, *mean pace*, *variance of pace*, and so on.  Trips that are invalid are discarded.  To perform the feature extraction, run:
-
-<code>
-python extractRegionFeaturesParallel.py
-</code>
-
-Again, this process took about an hour on our 8-core machine.  When it's done, it creates a folder called "4year\_features".  This folder contains CSV files that describe the various features, and how they vary over time.
-
-
-
-###**Step 4 - Probabilistic Computations**
-
-In this step, historical distributions are fitted to the features from Step 3.  Individual days are measured as likely or unlikely based on where their features fall in these distributions.  To perform this step, run:
-
-<code>
-python likelihood\_test\_parallel.py
-</code>
-
-This took about 30 seconds to run on our 8-core machine.  It produces two files as outputs:
-- results/lnl\_over\_time\_leave1.csv : The time-series of how usual or unusual each hour timeslice is.  Also includes some global pace info at each timeslice.
-- results/zscore.csv : The time series of *standardized pace vectors*
-
-
-At this point in time, it is possible to generate some plots to summarize the features and standardized features.  Run:
-
-<code>
-Rscript color\_pace\_over\_time.R
-</code>
-
-This will generate several PDF images in the results folder (Create a results folder if it does not exist).  For example, results/color\_pace\_3weeeks.pdf shows the mean pace vectors for 3 typical weeks of the year.  The image results/color\_standardized\_pace\_over\_time.pdf shows the standardized pace vector during the week of Hurricane Sandy.
-
-###**Step 5 - Event Detection**
-
-In this step, the time-series probabilities produced in Step 4 are thresholded, and a finite number of events are detected.  Intuitively, ranges of time where the probability is below the threshold are events.  To prevent thrashing over the threshold, events with less than 6 hours between them are merged into one large event.  Other properties of events like peak global pace deviation are computed.  To run the event detection, run:
-
-<code>
-python eventDetection.py
-</code>
-
-This took about 1 second on our machine.  The output is two CSV files, which contain events sorted by duration:
-- results/events\_nomerged.csv : The events before nearby (less than 6 hours apart) ones are merged
-- results/events\_sorted.csv : The events after the merging
-
-
-It is now possible to make plots of the probabilities and events.  To do this, run:
-
-<code>
-Rscript plot\_likelihood\_cov.R
-</code>
-
-This will generate several more plots in the results folder.
