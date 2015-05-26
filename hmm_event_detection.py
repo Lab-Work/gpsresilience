@@ -175,3 +175,5 @@ if __name__ == "__main__":
     process_events('results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv',
                    '4year_features', 'results/fine_events.csv')
     
+    process_events('results/link_features_imb20_k10_PCA_10000000pcs_5percmiss_robust_outlier_scores.csv',
+                   '4year_features', 'results/pca_fine_events.csv')

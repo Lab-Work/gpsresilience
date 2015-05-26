@@ -26,8 +26,13 @@ zt = read.csv("results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_
 zt$Date=as.character(zt$Date)
 
 #Create the color gradient ramp
-jet.colors =colorRamp(c("#00007F", "blue", "#007FFF", "cyan",
-                     "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
+#jet.colors =colorRamp(c("#00007F", "blue", "#007FFF", "cyan",
+#                     "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
+
+
+jet.colors =colorRamp(c("blue", "#007FFF", "cyan",
+                     "#7FFF7F", "yellow", "#FF7F00", "red"))
+
 
 
 #This function scales values from some arbitrary range, into the range (0,1)
@@ -126,8 +131,8 @@ addTags = function(t){
 	#heights = minv + (maxv-minv)*hvals
 	#segments(i,0,i,hvals, col="grey", lwd=3, lty=2)
 	
-	minv = 11
-	maxv=16
+	minv = 11.5
+	maxv=16.5
 	
 	#2012-10-29,20:00:00,Sandy hits land,Atlantic City NJ
 	i = match(TRUE, t$Date=="2012-10-29" & t$Hour==20)
@@ -235,14 +240,14 @@ makeMainPlot = function(startDate, endDate, mainTitle, type, crush=F){
 	}
 	
 	#Create the plot
-	plot(0,0, type="n", xlim=c(7,(24*7 - 7)), ylim=c(1,10+extra_height),
+	plot(0,0, type="n", xlim=c(7,(24*7 - 7)), ylim=c(1,10.5+extra_height),
 		xaxt="n", xlab="", yaxt="n", ylab="", main=mainTitle, cex.main=mainTitleSize)
 
 	# Add the necessary rows
-	addColorRow(s$r0.r0, 10, type)
-	addColorRow(s$r6.r6, 9, type)
-	addColorRow(s$r4.r4, 8, type)
-	addColorRow(s$r7.r7, 7, type)
+	addColorRow(s$r0.r0, 10.5, type)
+	addColorRow(s$r6.r6, 9.5, type)
+	addColorRow(s$r4.r4, 8.5, type)
+	addColorRow(s$r7.r7, 7.5, type)
 	addColorRow(s$r6.r4, 6, type)
 	addColorRow(s$r4.r6, 5, type)
 	addColorRow(s$r0.r1, 4, type)
@@ -250,7 +255,7 @@ makeMainPlot = function(startDate, endDate, mainTitle, type, crush=F){
 	addColorRow(s$r0.r7, 2, type)
 	addColorRow(s$r7.r0, 1, type)
 
-	abline(h=6.5, lwd=2)
+	#abline(h=6.5, lwd=3, lty=2)
 	
 
 	
@@ -274,8 +279,9 @@ makeMainPlot = function(startDate, endDate, mainTitle, type, crush=F){
 	
 	
 	#Zones = Y axis labels
-	zones = rev(c("0-0","6-6","4-4","1-1","6-4","4-6","0-1","1-0","0-7","7-0"))
-	axis(2, at=10:1, labels=rev(zones), las=1, cex.axis=.7)
+	y_at=c(10.5,9.5,8.5,7.5, 6:1)
+	zones = rev(c("0-0","6-6","4-4","7-7","6-4","4-6","0-1","1-0","0-7","7-0"))
+	axis(2, at=y_at, labels=rev(zones), las=1, cex.axis=.7)
 	
 	
 	#Draw horizontal lines between each group of rows (a group is a set of zones with the same origin)
@@ -347,7 +353,7 @@ plot1Week = function(weekDates, type){
 	addLegend(type, crush=T)
 	
 	#Add an overall title
-	title(main="Mean Pace Vector - Three Typical Weeks", outer=T, cex.main=1)
+	title(main="Origin-Destination Paces during a Typical Week", outer=T, cex.main=1)
 }
 
 
@@ -397,7 +403,8 @@ if(F){
 }
 
 pdf("results/color_pace_1week.pdf", 10, 2)
-weeks=c('2010-04-04', '2010-04-11')
+#weeks=c('2010-04-04', '2010-04-11')
+weeks=c('2011-03-06', '2011-03-13')
 par(oma=c(.1,.1,.7,.1))
 plot1Week(weeks, 'absolute')
 dev.off()

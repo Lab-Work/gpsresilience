@@ -319,19 +319,17 @@ if(__name__=="__main__"):
     #generateTimeSeriesLeave1("4year_features", use_link_db=True)
     
     """
+    # This performs the origin-destination analysis
     generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db=False, num_pcs=10000000,
                              robust=True, gamma="tune",  tol_perc="tune", perc_missing_allowed=.05,
                              pool=pool)
     """
      
     
-    generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db='tmp_vectors.pickle', num_pcs=10000000,
-                             robust=False, gamma="tune",  tol_perc="tune", perc_missing_allowed=.05,
-                             pool=pool, make_zscore_vid=False)
-    
     
     
     """
+    # This performs the link-level analysis
     generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db="tmp_vectors.pickle", num_pcs=10000000,
                              robust=True, gamma="tune", perc_missing_allowed=.05,
                              pool=pool)
