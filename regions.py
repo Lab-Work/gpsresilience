@@ -96,16 +96,37 @@ class ColorMap:
 # region id for a given coordinate, by examining the region_id of the nearest
 # node to that coordinate.  Has the same interface as ColorMap
 class GraphMap:
-    def __init__(self, road_map):
+    def __init__(self, road_map, use_cache=False, cache_size=10000):
         self.road_map = road_map
+        
+        if(use_cache):
+            self.cache_size = cache_size
+            self.cache = [[None]*cache_size for x in xrange(cache_size)]
+        else:
+            self.cache = None
 
     def regionAt(self, lat, lon):
-        nearest_node = self.road_map.get_nearest_node(lat, lon)
         
-        if(nearest_node==None):
-            return None
+        if(self.cache==None):
+            nearest_node = self.road_map.get_nearest_node(lat, lon)
             
-        return nearest_node.region_id
+            if(nearest_node==None):
+                return None
+                
+            return nearest_node.region_id
+        else:
+            i = int( self.cache_size * (lon - self.road_map.min_lon) / (self.road_map.max_lon - self.road_map.min_lon))
+            j = int( self.cache_size * (lat - self.road_map.min_lat) / (self.road_map.max_lat - self.road_map.min_lat))
+            if(i < 0 or i >= self.cache_size or j < 0 or j >= self.cache_size):
+                return None
+            
+            if(self.cache[i][j]==None):
+                mid_lon = (i+.5)/self.cache_size * (self.road_map.max_lon - self.road_map.min_lon)
+                mid_lat = (j+.5)/self.cache_size * (self.road_map.max_lat - self.road_map.min_lat)
+                self.cache[i][j] = self.road_map.get_nearest_node(mid_lat, mid_lon)
+            
+            return cache[i][j]
+                
     
     def getCells(self):
         unique_regions = set()
@@ -151,7 +172,7 @@ class RegionSystem(GridSystem):
         self.regionMap = ColorMap(BOUNDARY_FILE_NAME, (-74.08339, 40.8493, -73.86366, 40.68289))        
         """      
         
-        self.regionMap = GraphMap(road_map)
+        self.regionMap = GraphMap(road_map, use_cache=True)
         self.cells = self.regionMap.getCells()
         
         
