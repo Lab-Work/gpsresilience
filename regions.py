@@ -125,7 +125,7 @@ class GraphMap:
                 mid_lat = (j+.5)/self.cache_size * (self.road_map.max_lat - self.road_map.min_lat)
                 self.cache[i][j] = self.road_map.get_nearest_node(mid_lat, mid_lon)
             
-            return cache[i][j]
+            return self.cache[i][j]
                 
     
     def getCells(self):
