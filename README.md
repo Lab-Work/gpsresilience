@@ -4,6 +4,7 @@ Taxi GPS Data as Pervasive City-Scale Resilience Sensors
 ##1)Overview
 
 The code in this repository can be used to reproduce the results of paper "Using coarse GPS data to quantify city-scale transportation system resilience to extreme events" by Brian Donovan and Dan Work.  The purpose of this analysis is to extract meaningful information from large-scale taxi data, which can be downloaded [here](http://publish.illinois.edu/dbwork/open-data/).  Technically, the analysis processes the GPS data into two types of traffic estimates:
+
 1. Origin-Destination Paces.  This represents the expected pace (minutes/mile) of vehicles between pairs of regions in the city.
 2. Link-Level paces.  This represents the expected pace of vehicles driving over individual links in the road network.
 
@@ -85,6 +86,23 @@ This method computes the average pace of trips between various regions of the ci
 1. Run **taxisim.routing.partition_graph.run_many_tests()** .  This uses the KaHIP package to partition the road network into several regions.  The regions will be of roughly the same size and have very few links between them.  Note that you must have the [KaHIP](https://github.com/schulzchristian/KaHIP/) software compiled in order to run this portion of the analysis.  The KaHIP folder, or a link to it, should be placed inside the **taxisim** folder.  This will create new files such as **nyc_map4/nodes_no_nj_imb20_k10.csv** and **nyc_map4/links_no_nj_imb20_k10.csv**.  These are copies of the original graph, but every node now has a region_id assigned to it.
 2. Run **extractRegionFeaturesParallel.py**. This will use the trip data (stored in CSV files) to compute the average pace between all pairs of regions during each hour.  Note that the regions are the same regions that were created in the previous step.  A new folder **features_imb20_k10** will be created in order to store these results.
 3. Run **measureOutliers.py**. Inside the main section <code>if(__name__=="__main__"):</code> , ensure that the lines labled "This performs the origin-destination analysis" are uncommented.  As before, this portion of the analysis applies RPCA to the traffic estimates (which are stored in **features_imb20_k10/pace_features.csv**) and identifies outliers.  This time, the outliers are saved in **results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv**.
-4. Run **hmm_event_detection.py** .  This serves the same purpose as in the link-level method. 
+4. Run **hmm_event_detection.py** .  This serves the same purpose as in the link-level method.
+
+ 
+##4) Overview of Files
+The previous section described how to run the code and reproduce the results.  This section gives a brief description of the purpose of each file, and how they relate to each other.  This may be helpful, for example, if you wish to modify the code.  These files can be roughly broken into three categories
+
+###**Feature Extraction**
+These files take the raw data and process them into useful traffic estimates.  They also discard missing data, filter errors, etc...
+- **measureLinkOutliers.py** - For the link-level method.  Loads link-level traffic conditions from the database, removes links that often have missing data, and packages the rest of the links into a time-series vector.
+- **extractRegionFeaturesParallel.py** - For the origin-destination method.  Groups trips according to their origin and destination regions, then computes traffic estimates for these OD pairs, for each hour of the dataset.
+- **grid.py** - For the origin-destination method.  Contains helper classes which facilitate the aforementioned grouping of trips.  The data structures are designed to read in these trips in chronological order, so only the current time slice needs to be stored in memory at once.  In other words, as soon as a trip from the *next* timeslice is read, the current traffic estimates are output and freed.
+- **region.py** an extension to the previous class which can define more complicated types of regions.  For example, you can draw regions in a picture, or use region_ids from a road network graph.
+
+
+###**Outlier Detection**
+- **measureOutliers.py** - The main portion of the analysis, which finds outliers in traffic estimates.  This can be applied to either link-level or origin-destination traffic estimates.
+- **plot_outlier_scores.py** - 
+
 
 
