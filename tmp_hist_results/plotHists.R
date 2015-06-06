@@ -30,13 +30,13 @@ for(i in 1:length(filenames)){
   if(filename=='lat.csv'){
     s = t[t[,1] > 40.3 & t[,1] < 41.2,]
     camera_range=range(s[,1])
-    useful=c(40.6,40.9)
+    useful=c(40.65,40.9)
     errors=c(40.4, 41.1)
   }
   else if(filename=='lon.csv'){
     s = t[t[,1] > -74.3 & t[,1] < -73.5,]
     camera_range=c(-74.3, -73.5)
-    useful=c(-74.05, -73.7)
+    useful=c(-74.05, -73.85)
     errors=c(-74.25, -73.5)
   }
   else if(filename=='straightline.csv'){
@@ -93,13 +93,13 @@ for(i in 1:length(filenames)){
   plot(x=s[,1], y=s$frequency, type="n", lwd=1, main=titles[i], xlim=camera_range, xlab="", ylab="", yaxt="n")
   shadeUnderCurve(x=s[,1], y=s$frequency, col=my_cols[i], border=my_cols[i])
   
-  #abline(v=useful, lwd=3, lty=2)
+
 	if(useful[2] < camera_range[2])
 		rect(xleft=useful[2], xright=camera_range[2], ybottom=0, ytop=top, density=20, col="black")
 	if(camera_range[1] < useful[1])
 		rect(xleft=camera_range[1], xright=useful[1], ybottom=0, ytop=top, density=20, col="black")
 
-abline(v=errors, lwd=2, lty=1)
+
 	mtext(side=2, "Frequency", line=0.5, cex=.7)
 
 }
@@ -108,10 +108,10 @@ abline(v=errors, lwd=2, lty=1)
 plot(0,0,type="n", xaxt="n", yaxt="n")
  
  
-  legend("center", legend=c("Uninformative Range", "Error Bounds"),
-	density=c(30,NA), cex=1.3, lty=c(1,1),
-	fill=c("black", rgb(0,0,0,0)),  border=c("black", rgb(0,0,0,0)),
-	lwd=c(0,2),  bty="n", seg.len=c(0,2))
+  legend("center", legend=c("Error Bounds"),
+	density=30, cex=1.3, lty=1,
+	fill="black",  border=c("black"),
+	lwd=0,  bty="n", seg.len=0)
   
  
  title("Error Filtering", outer=T, cex.main=2)

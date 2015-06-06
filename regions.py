@@ -121,10 +121,10 @@ class GraphMap:
                 return None
             
             if(self.cache[i][j]==None):
-                mid_lon = (i+.5)/self.cache_size * (self.road_map.max_lon - self.road_map.min_lon)
-                mid_lat = (j+.5)/self.cache_size * (self.road_map.max_lat - self.road_map.min_lat)
-                self.cache[i][j] = self.road_map.get_nearest_node(mid_lat, mid_lon)
-            
+                mid_lon = (i+.5)/self.cache_size * (self.road_map.max_lon - self.road_map.min_lon) + self.road_map.min_lon
+                mid_lat = (j+.5)/self.cache_size * (self.road_map.max_lat - self.road_map.min_lat) + self.road_map.min_lat
+                nearest_node = self.road_map.get_nearest_node(mid_lat, mid_lon)
+                self.cache[i][j] = nearest_node.region_id 
             return self.cache[i][j]
                 
     
