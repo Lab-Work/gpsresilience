@@ -23,7 +23,7 @@ my_cols=c('darkred','darkred','darkblue','darkblue',rgb(.4,0,.4),'darkgreen',rgb
 for(i in 1:length(filenames)){
   
   filename = filenames[i]
-  print(filename)
+
   t = read.csv(filename)
   
 
@@ -70,13 +70,15 @@ for(i in 1:length(filenames)){
     errors=c(1/6, 120)
   }
   else if(filename=='minutes.csv'){
-    s = t[t[,1] > -1 & t[,1] < 8000,] / 60
+    t[,1] = t[,1] / 60
+    s = t[t[,1] > -1 & t[,1] < 80,]
     camera_range=range(s[,1])
     useful=c(1, 60)
     errors=c(1/6, 120)
   }
   else if(filename=='pace.csv'){
-    s = t[t[,1] > -1 & t[,1] < 6000,]/60
+    t[,1] = t[,1] / 60
+    s = t[t[,1] > -1 & t[,1] < 80,]
     #s = t[t[,1] > -1 & t[,1] < 120,]
     camera_range=range(s[,1])
     useful=c(2/3, 60)
@@ -86,18 +88,28 @@ for(i in 1:length(filenames)){
     s = t
   }
 
+
+  error_points = (t[,1] < useful[1] | t[,1] > useful[2])
+
+
+
+  num_errors = sum(t$frequency[error_points])
+  perc_errors = round(num_errors / sum(t$frequency)*100, digits=2)
+  print(paste(filename, useful[1], useful[2], perc_errors, sep=", "))
+
+
   top = max(s$frequency)
   
   par(mar=c(2,2,2,2))
-  print(camera_range)
+
   plot(x=s[,1], y=s$frequency, type="n", lwd=1, main=titles[i], xlim=camera_range, xlab="", ylab="", yaxt="n")
   shadeUnderCurve(x=s[,1], y=s$frequency, col=my_cols[i], border=my_cols[i])
   
 
 	if(useful[2] < camera_range[2])
-		rect(xleft=useful[2], xright=camera_range[2], ybottom=0, ytop=top, density=20, col="black")
+		rect(xleft=useful[2], xright=camera_range[2], ybottom=0, ytop=top, density=20, col="black", lwd=1.5)
 	if(camera_range[1] < useful[1])
-		rect(xleft=camera_range[1], xright=useful[1], ybottom=0, ytop=top, density=20, col="black")
+		rect(xleft=camera_range[1], xright=useful[1], ybottom=0, ytop=top, density=20, col="black", lwd=1.5)
 
 
 	mtext(side=2, "Frequency", line=0.5, cex=.7)
@@ -114,7 +126,7 @@ plot(0,0,type="n", xaxt="n", yaxt="n")
 	lwd=0,  bty="n", seg.len=0)
   
  
- title("Error Filtering", outer=T, cex.main=2)
+ title("Error Filtering", outer=T, cex.main=1.2)
 
 
 
