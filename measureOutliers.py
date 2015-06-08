@@ -308,12 +308,25 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
 
 
 
+def measureOutliersManyRegions():
+    pool = Pool(8)
+    k_vals = [1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,45,50]
+    for k in k_vals:
+        dir_name = "features_imb20_k%d" % k
+        print ("==========BEGINNING ANALYSIS WITH %d REGIONS============" % k)
+        generateTimeSeriesOutlierScores(dir_name, use_link_db=False, num_pcs=10000000,
+                             robust=True, gamma="tune",  tol_perc="tune", perc_missing_allowed=.05,
+                             pool=pool)
+        
+
+
+
 
 
 if(__name__=="__main__"):
+    measureOutliersManyRegions()
     
-    
-    pool = Pool(8)
+    #pool = Pool(8)
     #pool = DefaultPool()
     #logMsg("Running raw analysis")
     #generateTimeSeriesLeave1("4year_features", use_link_db=True)
