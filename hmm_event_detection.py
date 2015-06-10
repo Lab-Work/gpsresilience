@@ -168,7 +168,23 @@ def process_events(outlier_score_file, feature_dir, output_file):
             w.writerow(['?'] + line)
 
 
+
+
+def process_events_multiple_regions():
+    k_vals = [7,8,9,10,15,20,25,30,35,40,45,50]
+    for k in k_vals:
+        score_file = 'results/coarse_features_imb20_k%d_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv' % k
+        feature_dir = 'featuers_imb20_k%d' % k
+        out_file = 'results/coarse_events_k%d' % k
+        logMsg('Generating %s' % out_file)
+        process_events(score_file, feature_dir, out_file)
+
+
+
+
 if __name__ == "__main__":
+    process_events_multiple_regions()
+    """
     process_events('results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv',
                    '4year_features', 'results/coarse_events.csv')
                    
@@ -177,3 +193,4 @@ if __name__ == "__main__":
     
     process_events('results/link_features_imb20_k10_PCA_10000000pcs_5percmiss_robust_outlier_scores.csv',
                    '4year_features', 'results/pca_fine_events.csv')
+    """
