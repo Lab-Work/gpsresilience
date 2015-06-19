@@ -92,10 +92,26 @@ def augment_outlier_scores(in_file, out_file, predictions):
                 
 
 
+# Set up the hidden markov model.  We are modeling the non-event states as "0"
+# and event states as "1"
+
+# Transition matrix with heavy weight on the diagonals ensures that the model
+# is likely to stick in the same state rather than rapidly switching.  In other
+# words, the predictions will be relatively "smooth"
+DEFAULT_TRANS_MATRIX = array([[.999, .001],
+                      [.001,.999]])
+
+# Emission matrix - state 0 is likely to emit symbol 0, and vice versa
+# In other words, events are likely to be outliers
+DEFAULT_EMISSION_MATRIX = array([[.95, .05],
+                             [.4, .6]])
 
 
 
-def detect_events_hmm(mahal_timeseries, c_timeseries, global_pace_timeseries, threshold_quant=.95):
+def detect_events_hmm(mahal_timeseries, c_timeseries, global_pace_timeseries,
+                      threshold_quant=.95, trans_matrix = DEFAULT_TRANS_MATRIX,
+                      emission_matrix=DEFAULT_EMISSION_MATRIX, initial_state=None):
+            
     #Sort the keys of the timeseries chronologically    
     sorted_dates = sorted(mahal_timeseries)
     
@@ -123,22 +139,11 @@ def detect_events_hmm(mahal_timeseries, c_timeseries, global_pace_timeseries, th
             symbols.append(0)
     
     
-    # Set up the hidden markov model.  We are modeling the non-event states as "0"
-    # and event states as "1"
-    
-    # Transition matrix with heavy weight on the diagonals ensures that the model
-    # is likely to stick in the same state rather than rapidly switching.  In other
-    # words, the predictions will be relatively "smooth"
-    trans_matrix = array([[.999, .001],
-                      [.001,.999]])
 
-    # Emission matrix - state 0 is likely to emit symbol 0, and vice versa
-    # In other words, events are likely to be outliers
-    emission_matrix = array([[.95, .05],
-                             [.4, .6]])
+  
     
     # Actually set up the hmm
-    model = MultinomialHMM(n_components=2, transmat=trans_matrix)
+    model = MultinomialHMM(n_components=2, transmat=trans_matrix, startprob=initial_state)
     model.emissionprob_ = emission_matrix
     
     # Make the predictions
@@ -171,11 +176,13 @@ def process_events(outlier_score_file, feature_dir, output_file):
 
 
 def process_events_multiple_regions():
-    k_vals = [7,8,9,10,15,20,25,30,35,40,45,50]
+    #k_vals = [7,8,9,10,15,20,25,30,35,40,45,50]
+    k_vals = range(7,51)
     for k in k_vals:
         score_file = 'results/coarse_features_imb20_k%d_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv' % k
-        feature_dir = 'featuers_imb20_k%d' % k
-        out_file = 'results/coarse_events_k%d' % k
+        #feature_dir = 'featuers_imb20_k%d' % k
+        feature_dir = '4year_features'
+        out_file = 'results/coarse_events_k%d.csv' % k
         logMsg('Generating %s' % out_file)
         process_events(score_file, feature_dir, out_file)
 
