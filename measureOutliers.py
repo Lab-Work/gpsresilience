@@ -209,15 +209,17 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
 
     file_prefix += "%s_%s_%dpcs_%dpercmiss" % (inDir, robustStr, num_pcs, perc_missing_allowed*100)
 
+
     #pace_grouped = preprocess_data(pace_grouped, num_pcs,
     #                               perc_missing_allowed=perc_missing_allowed)
     pace_grouped, trip_names = remove_bad_dimensions_grouped(pace_grouped, trip_names, perc_missing_allowed)
-    logMsg(trip_names)
+    # logMsg(trip_names)
 
 
     #Also get global pace information
-    global_pace_timeseries = readGlobalPace(inDir)
-    (expected_pace_timeseries, sd_pace_timeseries) = getExpectedPace(global_pace_timeseries)
+    if inDir != '':
+        global_pace_timeseries = readGlobalPace(inDir)
+        (expected_pace_timeseries, sd_pace_timeseries) = getExpectedPace(global_pace_timeseries)
 
     logMsg("Starting processes")
     if(gamma=="tune"):
@@ -286,7 +288,7 @@ def generateTimeSeriesOutlierScores(inDir, use_link_db=False, robust=False, num_
         
         for (date, hour, weekday, mahal5, mahal10, mahal20, mahal50, c_val, z_scores, gamma, tol,
              n_pca_dim, n_guess, hi_pcs) in sorted(entries):
-            if(date >= '2012-10-21' and date < '2012-11-11'):
+            if(date >= '2014-06-01' and date < '2014-07-01'):
                 dt = datetime.strptime(date, '%Y-%m-%d') + timedelta(hours=int(hour))
                 date_list.append(dt)
                 zscore_list.append(z_scores)
@@ -341,9 +343,13 @@ if(__name__=="__main__"):
     
     
     
-    """
+    # """
     # This performs the link-level analysis
-    generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db="tmp_vectors.pickle", num_pcs=10000000,
-                             robust=True, gamma="tune", perc_missing_allowed=.05,
-                             pool=pool)
-    """
+    # generateTimeSeriesOutlierScores("features_imb20_k10", use_link_db="tmp_vectors_chi.pickle", num_pcs=10000000,
+    #                          robust=True, gamma="tune", perc_missing_allowed=.05,
+    #                          pool=pool)
+    inDir = ''
+    generateTimeSeriesOutlierScores(inDir, use_link_db ="tmp_vectors_chi_1_group.pickle", robust=True, num_pcs=10000000,
+                                    gamma="tune", tol_perc="tune", perc_missing_allowed=.4,
+                                    make_zscore_vid=False, pool = DefaultPool())
+    # """
