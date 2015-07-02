@@ -13,22 +13,23 @@ from datetime import datetime, timedelta
 from multiprocessing import Pool
 from functools import partial
 import csv
+from collections import defaultdict
 
 from measureOutliers import readGlobalPace
 from hmm_event_detection import detect_events_hmm, readOutlierScores, augment_outlier_scores
 from tools import logMsg, DefaultPool
 
 
-events_data = [("Snowstorm" , "2010-12-26 13:00:00" , 137),
+events_data = [("Snowstorm1" , "2010-12-26 13:00:00" , 137),
 ("Sandy" , "2012-10-28 21:00:00" , 116),
-("?" , "2012-11-12 07:00:00" , 110),
-("Snowstorm" , "2011-01-31 09:00:00" , 103),
-("Snowstorm" , "2011-01-26 09:00:00" , 56),
+("?1" , "2012-11-12 07:00:00" , 110),
+("Snowstorm2" , "2011-01-31 09:00:00" , 103),
+("Snowstorm3" , "2011-01-26 09:00:00" , 56),
 ("Protest?" , "2011-09-18 19:00:00" , 49),
 ("Irene" , "2011-08-27 11:00:00" , 46),
 ("Thanksgiving" , "2011-11-22 11:00:00" , 43),
-("?" , "2013-10-12 01:00:00" , 43),
-("?" , "2013-09-28 08:00:00" , 37)]
+("?2" , "2013-10-12 01:00:00" , 43),
+("?3" , "2013-09-28 08:00:00" , 37)]
 
 reference_events = []
 for event in events_data:
@@ -157,8 +158,7 @@ def run_many_simulations(num, mahal_timeseries=None , c_timeseries=None, global_
 
 
 def run_sims_in_parallel(outlier_score_file, feature_dir, output_file):
-    #pool = Pool(8)
-    pool = DefaultPool()
+    pool = Pool(8)
     mahal_timeseries, c_timeseries = readOutlierScores(outlier_score_file)
     global_pace_timeseries = readGlobalPace(feature_dir)
     
@@ -212,9 +212,49 @@ def test_median():
     
     alpha,beta = beta_method_of_moments(.6, .05)
     print alpha, beta, approx_beta_median(alpha, beta)
+
+
+
+def find_most_common_event_durations(in_filename, out_filename):
+    event_duration_counts = {}
+    event_lookup = {}
     
+    with open(in_filename, 'r') as f:
+        r = csv.reader(f)
+        r.next()
+        for (event, start_date, end_date, duration, max_pace_dev, min_pace_dev) in r:
+            if(event not in event_duration_counts):
+                event_duration_counts[event] = defaultdict(int)
+                event_lookup[event] = {}
+            event_duration_counts[event][duration] += 1
+            event_lookup[event][duration] = (event, start_date, end_date, int(float(duration)), max_pace_dev, min_pace_dev)
+            
+    events = []
+    for event in event_duration_counts:
+        best_duration = 0
+        highest_count = -1
+        for duration in event_duration_counts[event]:
+            if(event_duration_counts[event][duration] > highest_count):
+                highest_count = event_duration_counts[event][duration]
+                best_duration = duration
+        
+        events.append(event_lookup[event][best_duration])
+    
+    events.sort(key= lambda x: x[3], reverse=True)
+    
+    with open(out_filename, 'w') as f:
+        w = csv.writer(f)
+        w.writerow(['event', 'start_date', 'end_date', 'duration', 'max_pace_dev', 'min_pace_dev'])
+        w.writerows(events)        
+
+
+
 
 if(__name__=="__main__"):
+    
+    find_most_common_event_durations('results/coarse_montecarlo.csv', 'results/coarse_events_consensus.csv')
+    find_most_common_event_durations('results/fine_montecarlo.csv', 'results/fine_events_consensus.csv')
+    
     
     if(False):
         run_random_sims('results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv','4year_features')
@@ -227,7 +267,7 @@ if(__name__=="__main__"):
 
     
     
-    if(True):
+    if(False):
         logMsg("Starting")
         run_sims_in_parallel('results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv',
                              '4year_features', 'results/coarse_montecarlo.csv')

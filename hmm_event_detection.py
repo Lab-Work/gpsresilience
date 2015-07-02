@@ -9,7 +9,7 @@ from hmmlearn.hmm import MultinomialHMM
 from numpy import array
 
 from tools import *
-from measureOutliers_gy import readGlobalPace, getExpectedPace
+from measureOutliers import readGlobalPace, getExpectedPace
 import csv
 
 
