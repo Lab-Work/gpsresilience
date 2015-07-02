@@ -157,6 +157,9 @@ def detect_events_hmm(mahal_timeseries, c_timeseries, global_pace_timeseries,
     return events, predictions
 
 
+
+
+
 def process_events(outlier_score_file, feature_dir, output_file):
     mahal_timeseries, c_timeseries = readOutlierScores(outlier_score_file)
     global_pace_timeseries = readGlobalPace(feature_dir)

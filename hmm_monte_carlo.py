@@ -5,7 +5,7 @@ Created on Fri Jun 19 09:00:30 2015
 @author: Brian Donovan (briandonovan100@gmail.com)
 """
 
-from numpy import random, array,transpose
+from numpy import random, array,transpose, median, mean, var
 import numpy as np
 from numpy.linalg import eig
 
@@ -15,8 +15,8 @@ from functools import partial
 import csv
 
 from measureOutliers import readGlobalPace
-from hmm_event_detection import detect_events_hmm, readOutlierScores
-from tools import logMsg
+from hmm_event_detection import detect_events_hmm, readOutlierScores, augment_outlier_scores
+from tools import logMsg, DefaultPool
 
 
 events_data = [("Snowstorm" , "2010-12-26 13:00:00" , 137),
@@ -40,8 +40,16 @@ for event in events_data:
 
 def match_events(events):
     event_durations={}
+    event_starts={}
+    event_ends={}
+    event_max_pace_devs={}
+    event_min_pace_devs={}
     for event in reference_events:
         event_durations[event] = 0
+        event_starts[event]='?'
+        event_ends[event] = '?'
+        event_max_pace_devs[event] = '?'
+        event_min_pace_devs[event] = '?'
         
     for event in reference_events:
         (ev_name, ev_start, ev_end, ev_duration) = event
@@ -54,9 +62,24 @@ def match_events(events):
         
             if(ev_end > start_date and ev_start < end_date):
                 #print ("MATCH - %d , %s --> %s" % (duration, str(start_date), str(end_date)))
-                event_durations[event] = max(event_durations[event], duration)
+                if(event not in event_durations or duration > event_durations[event]):
+                    event_durations[event] = duration
+                    event_starts[event] = start_date
+                    event_ends[event] = end_date
+                    event_max_pace_devs[event] = max_pace_dev
+                    event_min_pace_devs[event] = min_pace_dev
+
+    chunk = []
+    for event in event_durations:
+        (name,_,_,_) = event
+        this_event = [name, event_starts[event], event_ends[event],
+                      event_durations[event], event_max_pace_devs[event],
+                      event_min_pace_devs[event]]
+        chunk.append(this_event)
         
-    return [["%s %s" % (name, str(start_date)), event_durations[name,start_date,end_date,dur]] for (name, start_date,end_date,dur) in event_durations]
+
+        
+    return chunk
             
 
 
@@ -134,8 +157,8 @@ def run_many_simulations(num, mahal_timeseries=None , c_timeseries=None, global_
 
 
 def run_sims_in_parallel(outlier_score_file, feature_dir, output_file):
-    pool = Pool(8)
-    
+    #pool = Pool(8)
+    pool = DefaultPool()
     mahal_timeseries, c_timeseries = readOutlierScores(outlier_score_file)
     global_pace_timeseries = readGlobalPace(feature_dir)
     
@@ -146,18 +169,70 @@ def run_sims_in_parallel(outlier_score_file, feature_dir, output_file):
     
     with open(output_file, 'w') as f:
         w = csv.writer(f)
-        w.writerow(['event','duration'])
+        w.writerow(['event','start_date', 'end_date', 'duration', 'max_pace_dev', 'min_pace_dev'])
         for chunk in result:
             w.writerows(chunk)
-                
+
+def run_random_sims(outlier_score_file, feature_dir):
+    
+    mahal_timeseries, c_timeseries = readOutlierScores(outlier_score_file)
+    global_pace_timeseries = readGlobalPace(feature_dir)
+    
+    for p in range(50):
+        print ("Sim %d" % p)
+        initial_state, trans_matrix, emission_matrix = randomly_draw_parameters()
+    
+        events, predictions = detect_events_hmm(mahal_timeseries, c_timeseries,
+                        global_pace_timeseries, threshold_quant=.95,
+                        trans_matrix = trans_matrix,
+                      emission_matrix=emission_matrix)
+        new_scores_file = 'tmp_results/coarse_events_k%d_scores.csv'%p
+    
+        augment_outlier_scores(outlier_score_file, new_scores_file, predictions)
+
+
+
+
+
+
+def approx_beta_median(alpha, beta, num_guesses=10000000):
+    vals = [random.beta(alpha, beta) for x in xrange(num_guesses)]
+    return median(vals)
+    
+
+
+
+
+def test_median():
+    alpha,beta =  beta_method_of_moments(.99, .03)
+    print alpha, beta, approx_beta_median(alpha, beta)
+    
+    alpha,beta = beta_method_of_moments(.95, .05)
+    print alpha, beta, approx_beta_median(alpha, beta)
+    
+    alpha,beta = beta_method_of_moments(.6, .05)
+    print alpha, beta, approx_beta_median(alpha, beta)
     
 
 if(__name__=="__main__"):
-    logMsg("Starting")
-    run_sims_in_parallel('results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv',
-                         '4year_features', 'results/coarse_montecarlo.csv')
     
-    logMsg("Finished OD method")
-    run_sims_in_parallel('results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv',
-                         '4year_features', 'results/fine_montecarlo.csv')
-    logMsg("Finished link-level method")
+    if(False):
+        run_random_sims('results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv','4year_features')
+        test_median()
+        
+        print beta_method_of_moments(.99, .03)
+        print beta_method_of_moments(.95, .05)
+        print beta_method_of_moments(.6, .05)
+    
+
+    
+    
+    if(True):
+        logMsg("Starting")
+        run_sims_in_parallel('results/coarse_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv',
+                             '4year_features', 'results/coarse_montecarlo.csv')
+        
+        logMsg("Finished OD method")
+        run_sims_in_parallel('results/link_features_imb20_k10_RPCAtune_10000000pcs_5percmiss_robust_outlier_scores.csv',
+                             '4year_features', 'results/fine_montecarlo.csv')
+        logMsg("Finished link-level method")

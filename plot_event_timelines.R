@@ -1,5 +1,6 @@
-k_vals = 7:50
+k_vals = 1:49
 #k_vals = 7:10
+k_vals = c(37,49,36)
 tabs = list()
 
 jet.colors =colorRamp(c("blue", "#007FFF", "cyan",
@@ -22,8 +23,9 @@ linearScale = function(v, lo, hi){
 
 
 for(k in k_vals){
-	print(paste("reading",k))
-	filename = paste('results/coarse_events_k',k,'_scores.csv', sep='')
+	
+	filename = paste('tmp_results/coarse_events_k',k,'_scores.csv', sep='')
+	print(paste("reading",filename))
 	tabs[[k]] = read.csv(filename)
 	tabs[[k]]$date = as.character(tabs[[k]]$date)
 }
@@ -36,20 +38,21 @@ plot_time_range = function(start_date, end_date, title){
 
 	s = t[t$date >= start_date & t$date <= end_date,]
 	perc_outliers = rep(0, nrow(s))
-	layout(matrix(c(1,2), 2, 1, byrow = TRUE), heights=c(3,1))
-	par(mar=c(2,4,2,1))
-	plot(0,0,type='n', xlim=c(0,nrow(s)), ylim=c(0,max(k_vals)), main=title, xaxt='n', xlab='Date', ylab='Number of Regions')
+	#layout(matrix(c(1,2), 2, 1, byrow = TRUE), heights=c(3,1))
+	#par(mar=c(2,4,2,1))
+	plot(0,0,type='n', xlim=c(0,nrow(s)), ylim=c(1,length(k_vals)), main=title, xaxt='n', yaxt='n', xlab='Date', ylab='HMM Parameters')
 		
 	print("b")
 
 	a = seq(1,nrow(s),24)
 	axis(1,labels=s$date[a], at=a)
 	
-	for(k in k_vals){
+	for(i in 1:length(k_vals)){
+		k = k_vals[i]
 		t = tabs[[k]]
 		s = t[t$date >= start_date & t$date <= end_date,]
 		cols = ifelse(s$state==1, 'black', 'white')
-		y_vals=rep(k,nrow(s))
+		y_vals=rep(i,nrow(s))
 		points(1:nrow(s),y_vals,col=cols,pch=15, cex=.6)
 		
 		thresh = quantile(t$mahal10, .95)	
@@ -63,12 +66,13 @@ plot_time_range = function(start_date, end_date, title){
 	abline(v=a)
 	legend("bottomright", legend=c("Outlier", "Event"), col=c("red", "black"), pch=c(20,15),  bg="white")
 	
-	
-	plot(perc_outliers, type="l", xaxt="n", xlab="Date", ylab="Perc Outliers", yaxt="n", ylim=c(0,1))
-	axis(1,labels=s$date[a], at=a)
-	axis(2,at=c(0,.5,1))
-	abline(v=a)
-	print("d")
+	if(F){
+		plot(perc_outliers, type="l", xaxt="n", xlab="Date", ylab="Perc Outliers", yaxt="n", ylim=c(0,1))
+		axis(1,labels=s$date[a], at=a)
+		axis(2,at=c(0,.5,1))
+		abline(v=a)
+		print("d")
+	}
 }
 
 
@@ -115,8 +119,7 @@ add_legend=function(lo,hi,value_granularity, legend_granularity, title){
 	cvals = linearScale(vals, lo, hi)
 	mycols = rgb(jet.colors(cvals)/255)
 	a = c((0:((hi - lo)/legend_granularity))*value_granularity*legend_granularity + 1)
-	print(vals)
-	print(a)
+
 
 	par(mar=c(.1,0,1,0))
         plot(0,0, type="n", xlim=c(lo,hi), ylim=c(0,1), xaxt="n", yaxt="n", , bty="n", cex.main=1, main=title)
@@ -140,16 +143,22 @@ plot_pairwise_consensus = function(){
 	layout(matrix(c(1,2),2), heights=c(10,2))
 	plot(0,0,type="n", xlim=range(k_vals), ylim=range(k_vals), xlab="Ground Truth Num Regions", ylab="Compared Num Regions")
 	for(i in k_vals){
-		print(i)
 		t = tabs[[i]]
 		thresh = quantile(t$mahal10, .95)
 		gt_outliers = (t$c_val==1 | t$mahal10 > thresh)
+		gt_events = (t$state==1)
 		for(j in k_vals){
 			t = tabs[[j]]
 			thresh = quantile(t$mahal10, .95)
 			ex_outliers = (t$c_val==1 | t$mahal10 > thresh)
+			ex_events = (t$state==1)
 
 			false_pos = sum(ex_outliers & !gt_outliers) / sum(!gt_outliers)
+			ev_false_pos = sum(ex_events & !gt_events) / sum(!gt_events)
+
+
+			print(paste("   FP", i,j, round(false_pos,5)))
+			print(paste("ev_FP", i,j, round(ev_false_pos,5)))
 			false_pos = linearScale(false_pos, 0,.1)
 			
 			col = rgb(jet.colors(false_pos)/255)
@@ -165,16 +174,20 @@ plot_pairwise_consensus = function(){
 	layout(matrix(c(1,2),2), heights=c(10,2))
 	plot(0,0,type="n", xlim=range(k_vals), ylim=range(k_vals), xlab="Ground Truth Num Regions", ylab="Compared Num Regions")
 	for(i in k_vals){
-		print(i)
 		t = tabs[[i]]
 		thresh = quantile(t$mahal10, .95)
 		gt_outliers = (t$c_val==1 | t$mahal10 > thresh)
+		gt_events = (t$state==1)
 		for(j in k_vals){
 			t = tabs[[j]]
 			thresh = quantile(t$mahal10, .95)
 			ex_outliers = (t$c_val==1 | t$mahal10 > thresh)
+			ex_events = (t$state==1)
 
 			false_neg = sum(!ex_outliers & gt_outliers) / sum(gt_outliers)
+			ev_false_neg = sum(!ex_events & gt_events) / sum(gt_events)
+			print(paste("   FN", i,j, round(false_neg,5)))
+			print(paste("ev_FN", i,j, round(ev_false_neg,5)))
 			false_neg = linearScale(false_neg, 0,1)
 			
 			col = rgb(jet.colors(false_neg)/255)
@@ -200,7 +213,7 @@ dev.off()
 
 
 
-pdf('results/event_timelines.pdf')
+pdf('results/event_timelines.pdf',10,3)
 
 plot_time_range('2010-12-26', '2011-01-05', 'Snowstorm')
 plot_time_range('2012-10-28', '2012-11-05', 'Sandy')
@@ -213,10 +226,19 @@ dev.off()
 
 
 
+pdf('results/event_snow_timeline.pdf', 10,3)
+plot_time_range('2010-12-26', '2011-01-05', 'Snowstorm')
+dev.off()
+
+pdf('results/event_sandy_timeline.pdf', 10,3)
+plot_time_range('2012-10-28', '2012-11-05', 'Sandy')
+dev.off()
+
+
+
+
 pdf('results/event_consensus.pdf')
 consensus = get_consensus()
-print(consensus)
-print(sum(consensus) / length(consensus))
 plot_consensus(consensus)
 dev.off()
 
